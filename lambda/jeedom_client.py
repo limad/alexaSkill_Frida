@@ -10,6 +10,8 @@ import requests
 
 # Codes JSON-RPC Jeedom pour « clé refusée » / « droits insuffisants ».
 AUTH_ERROR_CODES = (-32001, -32002, -32701)
+# Part maximale du budget réservée à l'ouverture de connexion (DNS + TCP + TLS).
+CONNECT_TIMEOUT = 2.0
 _ids = itertools.count(1)
 
 
@@ -35,8 +37,14 @@ class JeedomClient(object):
         body = dict(params or {})
         body["apikey"] = self._apikey
         payload = {"jsonrpc": "2.0", "id": next(_ids), "method": method, "params": body}
+        # requests applique le délai à la connexion PUIS à la lecture : on partage le
+        # budget entre les deux pour que le total reste sous `timeout`.
+        connect = min(CONNECT_TIMEOUT, timeout / 2.0)
+        read = max(timeout - connect, 0.3)
         try:
-            resp = self.session.post(self.endpoint, json=payload, timeout=timeout, verify=self.verify_ssl)
+            resp = self.session.post(self.endpoint, json=payload, timeout=(connect, read), verify=self.verify_ssl)
+        except requests.exceptions.ConnectTimeout:
+            raise JeedomError("unreachable", "connexion > {:.1f} s".format(connect))
         except requests.exceptions.Timeout:
             raise JeedomError("timeout", "{} > {:.1f} s".format(method, timeout))
         except requests.exceptions.SSLError:

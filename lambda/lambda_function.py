@@ -1,8 +1,14 @@
 # -*- coding: utf-8 -*-
-"""Skill Alexa « Jeedom Assist » : envoie la phrase de l'utilisateur aux interactions Jeedom.
+"""Skill Alexa « Frida » : envoie la phrase de l'utilisateur aux interactions Jeedom.
 
 Adapté de HomeAssistantAssist (https://github.com/fabianosan/HomeAssistantAssist)
 de Fabiano Santos — voir README.md.
+
+Organisation :
+- `configure()` prépare une fois par conteneur Lambda tout ce qui ne dépend que de
+  config.cfg (erreurs de config, URL du dashboard, client Jeedom) ;
+- `Turn` regroupe ce qui dépend de la requête (langue, textes, réponse) ;
+- les handlers ne font que choisir quoi répondre.
 """
 import json
 import logging
@@ -29,11 +35,6 @@ RESPONSE_RESERVE = 0.8
 # Clé de session : la conversation a été ouverte par « Alexa, ouvre … ».
 SESSION_CONVERSATION = "conversation"
 
-CONFIG = helpers.load_config(os.path.join(helpers.BASE_DIR, "config.cfg"))
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG if CONFIG["debug"] else logging.INFO)
-
 ERROR_TEXT_KEYS = {
     "timeout": "alexa_speak_timeout",
     "unreachable": "alexa_speak_unreachable",
@@ -41,7 +42,32 @@ ERROR_TEXT_KEYS = {
     "error": "alexa_speak_error",
 }
 
+logger = logging.getLogger(__name__)
+
+
+def load_json(name):
+    with open(os.path.join(helpers.BASE_DIR, name), encoding="utf-8") as f:
+        return json.load(f)
+
+
+# Documents APL lus une fois (jamais modifiés : les textes passent par datasources).
+APL_DASHBOARD = load_json("apl_dashboard.json")
+APL_EMPTY = load_json("apl_empty.json")
+
+CONFIG = {}
+CONFIG_ERRORS = []
+DASHBOARD_URL = ""
 _client = None
+
+
+def configure(config, client=None):
+    """Applique une configuration (au démarrage, ou dans les tests)."""
+    global CONFIG, CONFIG_ERRORS, DASHBOARD_URL, _client
+    CONFIG = config
+    CONFIG_ERRORS = helpers.config_errors(config)
+    DASHBOARD_URL = helpers.dashboard_url(config["jeedom_url"], config["jeedom_dashboard"])
+    _client = client
+    logger.setLevel(logging.DEBUG if config["debug"] else logging.INFO)
 
 
 def get_client():
@@ -57,9 +83,7 @@ def get_client():
     return _client
 
 
-def load_json(name):
-    with open(os.path.join(helpers.BASE_DIR, name), encoding="utf-8") as f:
-        return json.load(f)
+configure(helpers.load_config(os.path.join(helpers.BASE_DIR, "config.cfg")))
 
 
 class Deadline(object):
@@ -82,65 +106,92 @@ class Deadline(object):
 
 
 # --------------------------------------------------------------------------
-# Lecture de la requête Alexa
+# Requête en cours
 # --------------------------------------------------------------------------
-def request_locale(handler_input):
-    return getattr(handler_input.request_envelope.request, "locale", None) or helpers.DEFAULT_LOCALE
+class Turn(object):
+    """Une requête Alexa : langue, textes, appareil, session et constructeur de réponse."""
 
+    def __init__(self, handler_input):
+        self.handler_input = handler_input
+        self.builder = handler_input.response_builder
+        request = handler_input.request_envelope.request
+        self.locale = getattr(request, "locale", None) or helpers.DEFAULT_LOCALE
+        self.texts = helpers.load_locale(self.locale)
+        self.session = handler_input.attributes_manager.session_attributes
 
-def texts_for(handler_input):
-    return helpers.load_locale(request_locale(handler_input))
+    @property
+    def has_screen(self):
+        """Détecté à chaque requête : l'appareil qui parle est celui qui compte."""
+        try:
+            device = self.handler_input.request_envelope.context.system.device
+            return device.supported_interfaces.alexa_presentation_apl is not None
+        except AttributeError:
+            return False
 
+    def slot(self, name):
+        try:
+            slot = self.handler_input.request_envelope.request.intent.slots.get(name)
+            return (slot.value or "").strip() if slot else ""
+        except AttributeError:
+            return ""
 
-def supports_apl(handler_input):
-    """Détecté à chaque requête : l'appareil qui parle est celui qui compte."""
-    try:
-        device = handler_input.request_envelope.context.system.device
-        return device.supported_interfaces.alexa_presentation_apl is not None
-    except AttributeError:
-        return False
+    # Réponses -------------------------------------------------------------
+    def say(self, text, keep_open, reprompt=None):
+        self.builder.speak(helpers.ssml_safe(text))
+        if keep_open:
+            self.builder.ask(helpers.ssml_safe(reprompt or self.texts["alexa_speak_question"]))
+        else:
+            self.builder.set_should_end_session(True)
+        return self.builder.response
 
+    def say_key(self, key, keep_open, reprompt_key=None):
+        reprompt = self.texts[reprompt_key] if reprompt_key else None
+        return self.say(self.texts[key], keep_open, reprompt)
 
-def slot_value(handler_input, name):
-    try:
-        slot = handler_input.request_envelope.request.intent.slots.get(name)
-        return (slot.value or "").strip() if slot else ""
-    except AttributeError:
-        return ""
+    def goodbye(self):
+        return self.say(random.choice(helpers.split_list(self.texts["alexa_speak_exit"])), keep_open=False)
 
+    def not_configured(self):
+        """Réponse « skill non configuré », ou None si config.cfg est complet."""
+        if not CONFIG_ERRORS:
+            return None
+        logger.error("config.cfg incomplet, à renseigner : %s", ", ".join(CONFIG_ERRORS))
+        return self.say_key("alexa_speak_not_configured", keep_open=False)
 
-def session_attributes(handler_input):
-    return handler_input.attributes_manager.session_attributes
+    # Jeedom ---------------------------------------------------------------
+    def ask_jeedom(self, query, deadline):
+        """Phrase -> Jeedom -> texte prêt à être dit (message clair en cas d'erreur)."""
+        try:
+            reply = get_client().ask(query, timeout=deadline.remaining())
+        except JeedomError as e:
+            logger.error("Appel Jeedom en échec (%s) : %s", e.kind, e.detail)
+            return self.texts[ERROR_TEXT_KEYS.get(e.kind, "alexa_speak_error")]
+        logger.debug("Réponse Jeedom : %s", reply[:300])
+        return helpers.clean_for_speech(reply, self.locale) or self.texts["alexa_speak_empty"]
 
+    # Écran ----------------------------------------------------------------
+    def show_home_screen(self):
+        self.builder.add_directive(RenderDocumentDirective(
+            token=APL_TOKEN,
+            document=APL_DASHBOARD,
+            datasources={"jeedom": {
+                "title": self.texts["echo_screen_title"],
+                "welcome": self.texts["echo_screen_welcome_text"],
+                "hint": self.texts["echo_screen_click_text"],
+                "button": self.texts["echo_screen_button_text"],
+                "url": DASHBOARD_URL,
+            }},
+        ))
 
-# --------------------------------------------------------------------------
-# Réponses
-# --------------------------------------------------------------------------
-def respond(handler_input, text, keep_open, reprompt=None):
-    builder = handler_input.response_builder
-    builder.speak(helpers.ssml_safe(text))
-    if keep_open:
-        builder.ask(helpers.ssml_safe(reprompt or texts_for(handler_input)["alexa_speak_question"]))
-    else:
-        builder.set_should_end_session(True)
-    return builder.response
-
-
-def goodbye(handler_input):
-    text = random.choice(helpers.split_list(texts_for(handler_input)["alexa_speak_exit"]))
-    return respond(handler_input, text, keep_open=False)
-
-
-def ask_jeedom(handler_input, query, deadline):
-    """Phrase -> Jeedom -> texte prêt à être dit (message clair en cas d'erreur)."""
-    texts = texts_for(handler_input)
-    try:
-        reply = get_client().ask(query, timeout=deadline.remaining())
-    except JeedomError as e:
-        logger.error("Appel Jeedom en échec (%s) : %s", e.kind, e.detail)
-        return texts[ERROR_TEXT_KEYS.get(e.kind, "alexa_speak_error")]
-    logger.debug("Réponse Jeedom : %s", reply[:300])
-    return helpers.clean_for_speech(reply, request_locale(handler_input)) or texts["alexa_speak_empty"]
+    def open_dashboard(self):
+        if not self.has_screen:
+            return self.say_key("alexa_speak_no_screen", keep_open=False)
+        # OpenURL a besoin d'un document APL affiché : on rend un document vide.
+        self.builder.add_directive(RenderDocumentDirective(token=APL_TOKEN, document=APL_EMPTY))
+        self.builder.add_directive(ExecuteCommandsDirective(
+            token=APL_TOKEN, commands=[OpenUrlCommand(source=DASHBOARD_URL)]))
+        self.builder.speak(helpers.ssml_safe(self.texts["alexa_speak_open_dashboard"]))
+        return self.builder.response
 
 
 def consume_prompt(deadline):
@@ -164,43 +215,6 @@ def consume_prompt(deadline):
     return prompt
 
 
-def dashboard_apl(texts):
-    return RenderDocumentDirective(
-        token=APL_TOKEN,
-        document=load_json("apl_dashboard.json"),
-        datasources={
-            "jeedom": {
-                "title": texts["echo_screen_title"],
-                "welcome": texts["echo_screen_welcome_text"],
-                "hint": texts["echo_screen_click_text"],
-                "button": texts["echo_screen_button_text"],
-                "url": helpers.dashboard_url(CONFIG["jeedom_url"], CONFIG["jeedom_dashboard"]),
-            }
-        },
-    )
-
-
-def open_dashboard(handler_input):
-    texts = texts_for(handler_input)
-    if not supports_apl(handler_input):
-        return respond(handler_input, texts["alexa_speak_no_screen"], keep_open=False)
-    url = helpers.dashboard_url(CONFIG["jeedom_url"], CONFIG["jeedom_dashboard"])
-    builder = handler_input.response_builder
-    # OpenURL a besoin d'un document APL affiché : on rend un document vide.
-    builder.add_directive(RenderDocumentDirective(token=APL_TOKEN, document=load_json("apl_empty.json")))
-    builder.add_directive(ExecuteCommandsDirective(token=APL_TOKEN, commands=[OpenUrlCommand(source=url)]))
-    builder.speak(helpers.ssml_safe(texts["alexa_speak_open_dashboard"]))
-    return builder.response
-
-
-def not_configured(handler_input):
-    errors = helpers.config_errors(CONFIG)
-    if not errors:
-        return None
-    logger.error("config.cfg incomplet, à renseigner : %s", ", ".join(errors))
-    return respond(handler_input, texts_for(handler_input)["alexa_speak_not_configured"], keep_open=False)
-
-
 # --------------------------------------------------------------------------
 # Handlers
 # --------------------------------------------------------------------------
@@ -209,25 +223,24 @@ class LaunchRequestHandler(AbstractRequestHandler):
         return ask_utils.is_request_type("LaunchRequest")(handler_input)
 
     def handle(self, handler_input):
-        failure = not_configured(handler_input)
+        turn = Turn(handler_input)
+        failure = turn.not_configured()
         if failure:
             return failure
-        texts = texts_for(handler_input)
-        session_attributes(handler_input)[SESSION_CONVERSATION] = True
+        turn.session[SESSION_CONVERSATION] = True
         deadline = Deadline(handler_input, CONFIG["jeedom_timeout"])
 
         prompt = consume_prompt(deadline)
         if prompt:
             logger.info("Démarrage avec la phrase de la variable Jeedom")
-            return respond(handler_input, ask_jeedom(handler_input, prompt, deadline), keep_open=True)
+            return turn.say(turn.ask_jeedom(prompt, deadline), keep_open=True)
 
-        if supports_apl(handler_input):
-            handler_input.response_builder.add_directive(dashboard_apl(texts))
+        if turn.has_screen:
+            turn.show_home_screen()
         if CONFIG["suppress_greeting"]:
-            handler_input.response_builder.ask(helpers.ssml_safe(texts["alexa_speak_help"]))
-            return handler_input.response_builder.response
-        return respond(handler_input, texts["alexa_speak_welcome_message"], keep_open=True,
-                       reprompt=texts["alexa_speak_help"])
+            turn.builder.ask(helpers.ssml_safe(turn.texts["alexa_speak_help"]))
+            return turn.builder.response
+        return turn.say_key("alexa_speak_welcome_message", keep_open=True, reprompt_key="alexa_speak_help")
 
 
 class QueryIntentHandler(AbstractRequestHandler):
@@ -235,57 +248,53 @@ class QueryIntentHandler(AbstractRequestHandler):
         return ask_utils.is_intent_name(QUERY_INTENT)(handler_input)
 
     def handle(self, handler_input):
-        texts = texts_for(handler_input)
-        query = slot_value(handler_input, "query")
+        turn = Turn(handler_input)
+        query = turn.slot("query")
         if not query:
-            return respond(handler_input, texts["alexa_speak_help"], keep_open=True)
+            return turn.say_key("alexa_speak_help", keep_open=True)
         logger.info("Phrase reçue : %s", query)
 
-        if helpers.is_exit_request(query, helpers.split_list(texts["keywords_to_close_skill"])):
-            return goodbye(handler_input)
-        if helpers.matches_keyword(query, helpers.split_list(texts["keywords_to_open_dashboard"])):
-            return open_dashboard(handler_input)
-
-        failure = not_configured(handler_input)
+        if helpers.is_exit_request(query, turn.texts["keywords_to_close_skill"]):
+            return turn.goodbye()
+        failure = turn.not_configured()
         if failure:
             return failure
-        deadline = Deadline(handler_input, CONFIG["jeedom_timeout"])
-        speech = ask_jeedom(handler_input, query, deadline)
+        if helpers.matches_keyword(query, turn.texts["keywords_to_open_dashboard"]):
+            return turn.open_dashboard()
+
+        speech = turn.ask_jeedom(query, Deadline(handler_input, CONFIG["jeedom_timeout"]))
         # Conversation (« Alexa, ouvre … ») : keep_session_open.
         # Demande directe (« Alexa, demande à … de … ») : keep_session_open_oneshot.
-        if session_attributes(handler_input).get(SESSION_CONVERSATION):
-            keep_open = CONFIG["keep_session_open"]
-        else:
-            keep_open = CONFIG["keep_session_open_oneshot"]
-        return respond(handler_input, speech, keep_open=keep_open)
+        if turn.session.get(SESSION_CONVERSATION):
+            return turn.say(speech, keep_open=CONFIG["keep_session_open"])
+        return turn.say(speech, keep_open=CONFIG["keep_session_open_oneshot"])
 
 
-class HelpIntentHandler(AbstractRequestHandler):
+class SpeechIntentHandler(AbstractRequestHandler):
+    """Intention qui répond par un texte fixe et garde la session ouverte (aide, incompris)."""
+
+    def __init__(self, intent, text_key):
+        self.matches = ask_utils.is_intent_name(intent)
+        self.text_key = text_key
+
     def can_handle(self, handler_input):
-        return ask_utils.is_intent_name("AMAZON.HelpIntent")(handler_input)
+        return self.matches(handler_input)
 
     def handle(self, handler_input):
-        texts = texts_for(handler_input)
-        return respond(handler_input, texts["alexa_speak_help"], keep_open=True, reprompt=texts["alexa_speak_help"])
-
-
-class FallbackIntentHandler(AbstractRequestHandler):
-    def can_handle(self, handler_input):
-        return ask_utils.is_intent_name("AMAZON.FallbackIntent")(handler_input)
-
-    def handle(self, handler_input):
-        texts = texts_for(handler_input)
-        return respond(handler_input, texts["alexa_speak_fallback"], keep_open=True, reprompt=texts["alexa_speak_help"])
+        return Turn(handler_input).say_key(self.text_key, keep_open=True, reprompt_key="alexa_speak_help")
 
 
 class ExitIntentHandler(AbstractRequestHandler):
+    INTENTS = ("AMAZON.CancelIntent", "AMAZON.StopIntent", "AMAZON.NavigateHomeIntent")
+
+    def __init__(self):
+        self.matchers = [ask_utils.is_intent_name(name) for name in self.INTENTS]
+
     def can_handle(self, handler_input):
-        return (ask_utils.is_intent_name("AMAZON.CancelIntent")(handler_input)
-                or ask_utils.is_intent_name("AMAZON.StopIntent")(handler_input)
-                or ask_utils.is_intent_name("AMAZON.NavigateHomeIntent")(handler_input))
+        return any(match(handler_input) for match in self.matchers)
 
     def handle(self, handler_input):
-        return goodbye(handler_input)
+        return Turn(handler_input).goodbye()
 
 
 class SessionEndedRequestHandler(AbstractRequestHandler):
@@ -302,15 +311,14 @@ class CatchAllExceptionHandler(AbstractExceptionHandler):
 
     def handle(self, handler_input, exception):
         logger.error("Erreur inattendue : %s", type(exception).__name__, exc_info=True)
-        texts = texts_for(handler_input)
-        return respond(handler_input, texts["alexa_speak_error"], keep_open=True, reprompt=texts["alexa_speak_help"])
+        return Turn(handler_input).say_key("alexa_speak_error", keep_open=True, reprompt_key="alexa_speak_help")
 
 
 sb = SkillBuilder()
 sb.add_request_handler(LaunchRequestHandler())
 sb.add_request_handler(QueryIntentHandler())
-sb.add_request_handler(HelpIntentHandler())
-sb.add_request_handler(FallbackIntentHandler())
+sb.add_request_handler(SpeechIntentHandler("AMAZON.HelpIntent", "alexa_speak_help"))
+sb.add_request_handler(SpeechIntentHandler("AMAZON.FallbackIntent", "alexa_speak_fallback"))
 sb.add_request_handler(ExitIntentHandler())
 sb.add_request_handler(SessionEndedRequestHandler())
 sb.add_exception_handler(CatchAllExceptionHandler())

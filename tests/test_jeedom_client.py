@@ -49,7 +49,7 @@ class TestAsk:
         assert call["url"] == "https://j.example/core/api/jeeApi.php"
         assert call["json"]["method"] == "interact::tryToReply"
         assert call["json"]["params"] == {"query": "allume le salon", "profile": "Salon", "apikey": APIKEY}
-        assert call["timeout"] == 3.0
+        assert call["timeout"] == (1.5, 1.5)  # connexion + lecture = budget
         assert call["verify"] is False
 
     def test_no_profile_param_when_empty(self):
@@ -75,6 +75,14 @@ class TestErrors:
 
     def test_timeout(self):
         assert self.kind_of(exc=requests.exceptions.ReadTimeout()) == "timeout"
+
+    def test_timeout_split_between_connect_and_read(self):
+        c, s = client(ok({"reply": "ok"}))
+        c.ask("x", timeout=6.5)
+        assert s.calls[0]["timeout"] == (2.0, 4.5)
+
+    def test_connect_timeout_means_unreachable(self):
+        assert self.kind_of(exc=requests.exceptions.ConnectTimeout()) == "unreachable"
 
     def test_connection_error(self):
         assert self.kind_of(exc=requests.exceptions.ConnectionError()) == "unreachable"

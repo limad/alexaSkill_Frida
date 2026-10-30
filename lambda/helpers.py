@@ -3,6 +3,7 @@
 
 Aucune dépendance à ask-sdk ni à requests : tout est testable directement.
 """
+import functools
 import glob
 import html
 import os
@@ -135,14 +136,19 @@ def split_list(value):
     return [item.strip() for item in str(value or "").split(";") if item.strip()]
 
 
+@functools.lru_cache(maxsize=64)
+def _keyword_regex(keywords):
+    """Une seule regex par liste `a;b;c` (compilée une fois par conteneur Lambda)."""
+    words = sorted({normalize(k) for k in split_list(keywords)} - {""}, key=len, reverse=True)
+    if not words:
+        return None
+    return re.compile(r"(?<!\w)(?:" + "|".join(re.escape(w) for w in words) + r")(?!\w)")
+
+
 def matches_keyword(query, keywords):
-    """Vrai si un mot-clé apparaît dans la requête comme mot ou expression entière."""
-    text = normalize(query)
-    for keyword in keywords:
-        key = normalize(keyword)
-        if key and re.search(r"(?<!\w)" + re.escape(key) + r"(?!\w)", text):
-            return True
-    return False
+    """Vrai si un mot-clé de la liste `a;b;c` apparaît comme mot ou expression entière."""
+    pattern = _keyword_regex(keywords or "")
+    return bool(pattern and pattern.search(normalize(query)))
 
 
 def is_exit_request(query, keywords, max_words=3):

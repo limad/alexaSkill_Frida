@@ -38,9 +38,11 @@ class FakeClient(object):
 
 
 @pytest.fixture
-def setup(monkeypatch):
+def setup():
+    original_config, original_client = lf.CONFIG, lf._client
+
     def apply(client=None, **config):
-        cfg = dict(lf.CONFIG)
+        cfg = dict(original_config)
         cfg.update({
             "jeedom_url": "https://j.example",
             "jeedom_apikey": APIKEY,
@@ -51,12 +53,12 @@ def setup(monkeypatch):
             "jeedom_timeout": 6.5,
         })
         cfg.update(config)
-        monkeypatch.setattr(lf, "CONFIG", cfg)
         client = client or FakeClient()
-        monkeypatch.setattr(lf, "_client", client)
+        lf.configure(cfg, client)
         return client
 
-    return apply
+    yield apply
+    lf.configure(original_config, original_client)
 
 
 def run(hi):
@@ -224,6 +226,12 @@ class TestDashboard:
         assert render.token == execute.token
         assert rb.speech == "J'ouvre Jeedom"
 
+    def test_not_configured_before_opening(self, setup):
+        setup(jeedom_url="")
+        rb = run(query("ouvre jeedom", apl=True))
+        assert rb.directives == []
+        assert "pas encore configuré" in rb.speech
+
     def test_no_screen(self, setup):
         setup()
         rb = run(query("ouvre le tableau de bord", apl=False))
@@ -269,6 +277,6 @@ class TestBuiltIns:
         def boom(*args, **kwargs):
             raise KeyError("x")
 
-        monkeypatch.setattr(lf, "ask_jeedom", boom)
+        monkeypatch.setattr(lf.Turn, "ask_jeedom", boom)
         rb = run(query("test"))
         assert "n'a pas pu traiter" in rb.speech

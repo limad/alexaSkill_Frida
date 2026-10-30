@@ -67,16 +67,25 @@ class TestLocale:
 
 class TestKeywords:
     def test_whole_word_only(self):
-        assert helpers.matches_keyword("ouvre jeedom", ["ouvre jeedom"])
-        assert not helpers.matches_keyword("ouvre jeedomette", ["ouvre jeedom"])
+        assert helpers.matches_keyword("ouvre jeedom", "ouvre jeedom")
+        assert not helpers.matches_keyword("ouvre jeedomette", "ouvre jeedom")
 
     def test_accents_and_case_ignored(self):
-        assert helpers.matches_keyword("Ouvre le Tableau de Bord", ["ouvre le tableau de bord"])
-        assert helpers.matches_keyword("ÖFFNE das Dashboard", ["öffne das dashboard"])
-        assert helpers.matches_keyword("c’est tout", ["c'est tout"])
+        assert helpers.matches_keyword("Ouvre le Tableau de Bord", "ouvre le tableau de bord")
+        assert helpers.matches_keyword("ÖFFNE das Dashboard", "öffne das dashboard")
+        assert helpers.matches_keyword("c\u2019est tout", "c'est tout")
+
+    def test_any_keyword_of_the_list(self):
+        assert helpers.matches_keyword("affiche jeedom", "ouvre jeedom; affiche jeedom")
+        assert not helpers.matches_keyword("affiche", "ouvre jeedom; affiche jeedom")
+
+    def test_empty_list(self):
+        assert not helpers.matches_keyword("non", "")
+        assert not helpers.matches_keyword("non", None)
+        assert not helpers.matches_keyword("non", " ; ")
 
     def test_exit_only_for_short_sentences(self):
-        words = helpers.split_list("non;rien;c'est tout;merci")
+        words = "non;rien;c'est tout;merci"
         assert helpers.is_exit_request("non merci", words)
         assert helpers.is_exit_request("c'est tout", words)
         assert not helpers.is_exit_request("allume la lumière du salon merci", words)

@@ -25,8 +25,7 @@ class Client:
     def write_variable(self, name, value, timeout=2.0):
         pass
 
-lf.CONFIG.update({"jeedom_url": "https://j.example", "jeedom_apikey": "abcdefghijklmnopqrstu"})
-lf._client = Client()
+lf.configure(dict(lf.CONFIG, jeedom_url="https://j.example", jeedom_apikey="abcdefghijklmnopqrstu"), Client())
 
 def envelope(request, apl=True, new=True, attributes=None):
     interfaces = {"Alexa.Presentation.APL": {"runtime": {"maxVersion": "1.6"}}} if apl else {}
