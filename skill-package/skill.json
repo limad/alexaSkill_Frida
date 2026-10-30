@@ -119,7 +119,7 @@
       "isAvailableWorldwide": true,
       "locales": {
         "de-DE": {
-          "name": "Jeedom Assist",
+          "name": "Frida",
           "summary": "Steuere dein Zuhause per Sprache über die Interaktionen deines Jeedom.",
           "description": "Dieser Skill sendet deine Sätze an die Interaktionen deines Jeedom-Servers und liest die Antwort vor. Auf einem Echo Show öffnet er auch dein Jeedom-Dashboard.",
           "smallIconUri": "file://assets/images/common_smallIconUri.png",
@@ -131,7 +131,7 @@
           ]
         },
         "en-AU": {
-          "name": "Jeedom Assist",
+          "name": "Frida",
           "summary": "Control your home by voice through your Jeedom interactions.",
           "description": "This skill sends your sentences to the interactions of your Jeedom server and reads the answer aloud. On an Echo Show it can also open your Jeedom dashboard.",
           "smallIconUri": "file://assets/images/common_smallIconUri.png",
@@ -143,7 +143,7 @@
           ]
         },
         "en-CA": {
-          "name": "Jeedom Assist",
+          "name": "Frida",
           "summary": "Control your home by voice through your Jeedom interactions.",
           "description": "This skill sends your sentences to the interactions of your Jeedom server and reads the answer aloud. On an Echo Show it can also open your Jeedom dashboard.",
           "smallIconUri": "file://assets/images/common_smallIconUri.png",
@@ -155,7 +155,7 @@
           ]
         },
         "en-GB": {
-          "name": "Jeedom Assist",
+          "name": "Frida",
           "summary": "Control your home by voice through your Jeedom interactions.",
           "description": "This skill sends your sentences to the interactions of your Jeedom server and reads the answer aloud. On an Echo Show it can also open your Jeedom dashboard.",
           "smallIconUri": "file://assets/images/common_smallIconUri.png",
@@ -167,7 +167,7 @@
           ]
         },
         "en-US": {
-          "name": "Jeedom Assist",
+          "name": "Frida",
           "summary": "Control your home by voice through your Jeedom interactions.",
           "description": "This skill sends your sentences to the interactions of your Jeedom server and reads the answer aloud. On an Echo Show it can also open your Jeedom dashboard.",
           "smallIconUri": "file://assets/images/common_smallIconUri.png",
@@ -179,7 +179,7 @@
           ]
         },
         "es-ES": {
-          "name": "Jeedom Assist",
+          "name": "Frida",
           "summary": "Controla tu casa por voz con las interacciones de tu Jeedom.",
           "description": "Esta skill envía tus frases a las interacciones de tu servidor Jeedom y lee la respuesta. En un Echo Show también abre tu panel de Jeedom.",
           "smallIconUri": "file://assets/images/common_smallIconUri.png",
@@ -191,7 +191,7 @@
           ]
         },
         "es-MX": {
-          "name": "Jeedom Assist",
+          "name": "Frida",
           "summary": "Controla tu casa por voz con las interacciones de tu Jeedom.",
           "description": "Esta skill envía tus frases a las interacciones de tu servidor Jeedom y lee la respuesta. En un Echo Show también abre tu panel de Jeedom.",
           "smallIconUri": "file://assets/images/common_smallIconUri.png",
@@ -203,7 +203,7 @@
           ]
         },
         "es-US": {
-          "name": "Jeedom Assist",
+          "name": "Frida",
           "summary": "Controla tu casa por voz con las interacciones de tu Jeedom.",
           "description": "Esta skill envía tus frases a las interacciones de tu servidor Jeedom y lee la respuesta. En un Echo Show también abre tu panel de Jeedom.",
           "smallIconUri": "file://assets/images/common_smallIconUri.png",
@@ -215,7 +215,7 @@
           ]
         },
         "fr-CA": {
-          "name": "Jeedom Assist",
+          "name": "Frida",
           "summary": "Pilotez votre maison à la voix grâce aux interactions de votre Jeedom.",
           "description": "Ce skill envoie vos phrases aux interactions de votre serveur Jeedom et lit la réponse. Sur un Echo Show, il ouvre aussi votre dashboard Jeedom.",
           "smallIconUri": "file://assets/images/common_smallIconUri.png",
@@ -227,7 +227,7 @@
           ]
         },
         "fr-FR": {
-          "name": "Jeedom Assist",
+          "name": "Frida",
           "summary": "Pilotez votre maison à la voix grâce aux interactions de votre Jeedom.",
           "description": "Ce skill envoie vos phrases aux interactions de votre serveur Jeedom et lit la réponse. Sur un Echo Show, il ouvre aussi votre dashboard Jeedom.",
           "smallIconUri": "file://assets/images/common_smallIconUri.png",
@@ -239,7 +239,7 @@
           ]
         },
         "it-IT": {
-          "name": "Jeedom Assist",
+          "name": "Frida",
           "summary": "Controlla la casa con la voce tramite le interazioni del tuo Jeedom.",
           "description": "Questa skill invia le tue frasi alle interazioni del tuo server Jeedom e legge la risposta. Su un Echo Show apre anche la dashboard di Jeedom.",
           "smallIconUri": "file://assets/images/common_smallIconUri.png",
@@ -251,7 +251,7 @@
           ]
         },
         "nl-NL": {
-          "name": "Jeedom Assist",
+          "name": "Frida",
           "summary": "Bedien je huis met je stem via de interacties van je Jeedom.",
           "description": "Deze skill stuurt je zinnen naar de interacties van je Jeedom-server en leest het antwoord voor. Op een Echo Show opent hij ook je Jeedom-dashboard.",
           "smallIconUri": "file://assets/images/common_smallIconUri.png",
@@ -263,7 +263,7 @@
           ]
         },
         "pt-BR": {
-          "name": "Jeedom Assist",
+          "name": "Frida",
           "summary": "Controle a sua casa por voz através das interações do Jeedom.",
           "description": "Esta skill envia as suas frases para as interações do seu servidor Jeedom e lê a resposta. Num Echo Show também abre o painel do Jeedom.",
           "smallIconUri": "file://assets/images/common_smallIconUri.png",
@@ -275,7 +275,7 @@
           ]
         },
         "pt-PT": {
-          "name": "Jeedom Assist",
+          "name": "Frida",
           "summary": "Controle a sua casa por voz através das interações do Jeedom.",
           "description": "Esta skill envia as suas frases para as interações do seu servidor Jeedom e lê a resposta. Num Echo Show também abre o painel do Jeedom.",
           "smallIconUri": "file://assets/images/common_smallIconUri.png",

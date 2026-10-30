@@ -2,7 +2,7 @@
   "type": "APL",
   "version": "1.6",
   "theme": "dark",
-  "description": "Écran d'accueil Jeedom Assist : bouton d'ouverture du dashboard.",
+  "description": "Écran d'accueil Frida : bouton d'ouverture du dashboard.",
   "mainTemplate": {
     "parameters": ["payload"],
     "items": [

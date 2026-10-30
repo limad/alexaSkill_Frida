@@ -1,4 +1,4 @@
-echo_screen_title=Jeedom
+echo_screen_title=Frida
 echo_screen_welcome_text=Bienvenue à la maison !
 echo_screen_click_text=Touchez le bouton ci-dessous pour ouvrir votre dashboard Jeedom
 echo_screen_button_text=Ouvrir Jeedom
