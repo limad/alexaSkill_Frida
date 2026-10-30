@@ -11,7 +11,11 @@ APIKEY = "cle-secrete-1234567890"
 
 
 class FakeClient(object):
-    def __init__(self, reply="C'est fait", error=None, variable="", read_error=None, write_error=None):
+    def __init__(self, reply="C'est fait", error=None, variable="", read_error=None, write_error=None,
+                 voice_results=None, voice_error=None):
+        self.voice_results = list(voice_results or [])
+        self.voice_error = voice_error
+        self.voiced = []
         self.reply = reply
         self.error = error
         self.variable = variable
@@ -25,6 +29,13 @@ class FakeClient(object):
         if self.error:
             raise self.error
         return self.reply
+
+    def voice(self, query, device_id="", person_id="", locale="", force_exact=False, timeout=6.0):
+        self.voiced.append({"query": query, "device_id": device_id, "person_id": person_id,
+                            "locale": locale, "force_exact": force_exact, "timeout": timeout})
+        if self.voice_error:
+            raise self.voice_error
+        return self.voice_results.pop(0) if self.voice_results else {"reply": "Fait par l'IA", "matched": True}
 
     def read_variable(self, name, timeout=2.0):
         if self.read_error:
@@ -280,3 +291,125 @@ class TestBuiltIns:
         monkeypatch.setattr(lf.Turn, "ask_jeedom", boom)
         rb = run(query("test"))
         assert "n'a pas pu traiter" in rb.speech
+
+
+AMBIGUOUS = {"reply": "J'ai trouvé plusieurs commandes proches. 1 : salon, 2 : cuisine. Laquelle ?",
+             "matched": False, "ambiguous": True, "options": ["allume salon", "allume cuisine"]}
+UNSURE = {"reply": "Je ne suis pas sûr. Veux-tu dire : Lampe salon On ? Dis oui pour confirmer.",
+          "matched": False, "ambiguous": True, "options": ["lampe salon on"]}
+
+
+class TestAlexaapiv2Backend:
+    def test_voice_router_used_with_device_locale_person(self, setup):
+        client = setup(jeedom_backend="alexaapiv2")
+        rb = run(query("éteins tout", locale="fr-CA", person="amzn1.ask.person.P"))
+        assert client.asked == []
+        call = client.voiced[0]
+        assert call["query"] == "éteins tout" and call["force_exact"] is False
+        assert call["device_id"] == "amzn1.ask.device.TEST"
+        assert call["locale"] == "fr-CA" and call["person_id"] == "amzn1.ask.person.P"
+        assert rb.speech == "Fait par l'IA."
+
+    def test_async_ack_is_spoken(self, setup):
+        setup(FakeClient(voice_results=[{"reply": "Je m'en occupe.", "matched": True, "route": "async"}]),
+              jeedom_backend="alexaapiv2")
+        assert run(query("résume la maison")).speech == "Je m'en occupe."
+
+    def test_fallback_to_core_when_plugin_fails(self, setup):
+        client = setup(FakeClient(reply="Réponse du core", voice_error=JeedomError("error", "voiceRouter HTTP 404")),
+                       jeedom_backend="alexaapiv2")
+        rb = run(query("allume la cuisine"))
+        assert len(client.voiced) == 1
+        assert client.asked[0][0] == "allume la cuisine"
+        assert rb.speech == "Réponse du core."
+
+    def test_fallback_on_auth_error_too(self, setup):
+        client = setup(FakeClient(voice_error=JeedomError("auth", "voiceRouter HTTP 401")), jeedom_backend="alexaapiv2")
+        run(query("x"))
+        assert client.asked
+
+    def test_no_fallback_after_timeout(self, setup):
+        client = setup(FakeClient(voice_error=JeedomError("timeout", "voiceRouter > 6.5 s")), jeedom_backend="alexaapiv2")
+        rb = run(query("x"))
+        assert client.asked == []
+        assert "trop de temps" in rb.speech
+
+    def test_no_fallback_without_time_left(self, setup):
+        client = setup(FakeClient(voice_error=JeedomError("error", "HTTP 500")), jeedom_backend="alexaapiv2")
+        run(query("x", lambda_ms=int((lf.RESPONSE_RESERVE + lf.FALLBACK_MIN_TIME - 0.3) * 1000)))
+        assert client.asked == []
+
+    def test_core_backend_never_calls_plugin(self, setup):
+        client = setup(jeedom_backend="core")
+        run(query("x"))
+        assert client.voiced == [] and client.asked
+
+
+class TestChoices:
+    def test_ambiguous_keeps_options_and_session(self, setup):
+        setup(FakeClient(voice_results=[AMBIGUOUS]), jeedom_backend="alexaapiv2")
+        hi = query("allume")
+        rb = run(hi)
+        assert hi.attributes_manager.session_attributes[lf.SESSION_OPTIONS] == AMBIGUOUS["options"]
+        assert rb.should_end is False
+        assert rb.reprompt == "Dites oui, ou le numéro de votre choix."
+
+    def test_number_resends_option_with_force_exact(self, setup):
+        client = setup(FakeClient(voice_results=[{"reply": "Cuisine allumée", "matched": True}]),
+                       jeedom_backend="alexaapiv2")
+        hi = query("deux", session={lf.SESSION_OPTIONS: AMBIGUOUS["options"]})
+        rb = run(hi)
+        assert client.voiced[0]["query"] == "allume cuisine"
+        assert client.voiced[0]["force_exact"] is True
+        assert lf.SESSION_OPTIONS not in hi.attributes_manager.session_attributes
+        assert rb.speech == "Cuisine allumée."
+        assert rb.should_end is True  # demande directe
+
+    def test_yes_confirms_single_option(self, setup):
+        client = setup(jeedom_backend="alexaapiv2")
+        run(make_input(intent="AMAZON.YesIntent", session={lf.SESSION_OPTIONS: UNSURE["options"]}))
+        assert client.voiced[0]["query"] == "lampe salon on"
+        assert client.voiced[0]["force_exact"] is True
+
+    def test_yes_with_several_options_asks_number(self, setup):
+        client = setup(jeedom_backend="alexaapiv2")
+        hi = make_input(intent="AMAZON.YesIntent", session={lf.SESSION_OPTIONS: AMBIGUOUS["options"]})
+        rb = run(hi)
+        assert client.voiced == []
+        assert hi.attributes_manager.session_attributes[lf.SESSION_OPTIONS] == AMBIGUOUS["options"]
+        assert rb.speech == "Dites oui, ou le numéro de votre choix."
+
+    @pytest.mark.parametrize("hi_factory", [
+        lambda: make_input(intent="AMAZON.NoIntent", session={lf.SESSION_OPTIONS: ["a"]}),
+        lambda: query("non", session={lf.SESSION_OPTIONS: ["a"]}),
+    ])
+    def test_no_cancels(self, setup, hi_factory):
+        client = setup(jeedom_backend="alexaapiv2")
+        hi = hi_factory()
+        rb = run(hi)
+        assert client.voiced == []
+        assert rb.speech == "D'accord, rien n'est fait."
+        assert lf.SESSION_OPTIONS not in hi.attributes_manager.session_attributes
+
+    def test_no_without_pending_choice_says_goodbye(self, setup):
+        setup()
+        rb = run(make_input(intent="AMAZON.NoIntent"))
+        assert rb.should_end is True
+
+    def test_yes_without_pending_choice_helps(self, setup):
+        setup()
+        rb = run(make_input(intent="AMAZON.YesIntent"))
+        assert rb.should_end is False
+
+    def test_new_sentence_replaces_pending_choice(self, setup):
+        client = setup(jeedom_backend="alexaapiv2")
+        hi = query("ferme les volets du salon", session={lf.SESSION_OPTIONS: AMBIGUOUS["options"]})
+        run(hi)
+        assert client.voiced[0]["query"] == "ferme les volets du salon"
+        assert client.voiced[0]["force_exact"] is False
+        assert lf.SESSION_OPTIONS not in hi.attributes_manager.session_attributes
+
+    def test_choice_inside_conversation_keeps_session(self, setup):
+        setup(jeedom_backend="alexaapiv2")
+        rb = run(query("1", session={lf.SESSION_OPTIONS: AMBIGUOUS["options"], lf.SESSION_CONVERSATION: True}))
+        assert rb.should_end is False

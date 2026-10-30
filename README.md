@@ -2,7 +2,7 @@
 
 [Français](#français) · [English](#english)
 
-Skill Alexa autonome qui envoie vos phrases aux **interactions Jeedom** (`interact::tryToReply`) et lit la réponse. Sur Echo Show, il ouvre aussi votre dashboard Jeedom. Aucun plugin Jeedom n'est nécessaire : seule l'API JSON-RPC du core est utilisée.
+Skill Alexa autonome qui envoie vos phrases aux **interactions Jeedom** (`interact::tryToReply`) et lit la réponse. Sur Echo Show, il ouvre aussi votre dashboard Jeedom. Aucun plugin Jeedom n'est nécessaire (API JSON-RPC du core) ; avec le plugin Alexa (`alexaapiv2`) installé, Frida peut aussi passer par son routeur vocal pour l'IA (`ai_assistant`, `mcp_jeedom`), avec repli automatique sur le core.
 
 > **Crédits** — Adaptation de [HomeAssistantAssist](https://github.com/fabianosan/HomeAssistantAssist) de **Fabiano Santos** ([@fabianosan](https://github.com/fabianosan)), version du commit `7dfc40c` (16/10/2025). Le principe (intention unique `{query}` + slot `AMAZON.Person`, écran APL avec bouton, mots de sortie, 14 langues, démarrage par phrase pré-enregistrée) vient de ce projet.
 >
@@ -23,6 +23,7 @@ Skill Alexa autonome qui envoie vos phrases aux **interactions Jeedom** (`intera
 - **Conversation** : « Alexa, ouvre assistant frida », puis enchaînez les demandes ; la session reste ouverte (« Autre chose ? ») jusqu'à un mot de sortie (« non », « merci », « c'est tout »…) ou « stop ».
 - **Demande directe** : « Alexa, demande à assistant frida d'allumer la cuisine » ; Alexa répond puis ferme la session (ou la garde ouverte avec `keep_session_open_oneshot=True`, comme l'original).
 - **Dashboard** : « ouvre jeedom », « ouvre le tableau de bord »… ouvre le dashboard dans le navigateur de l'Echo Show. À l'ouverture du skill, l'écran affiche aussi un bouton « Ouvrir Jeedom ».
+- **IA (facultatif)** : avec `jeedom_backend=alexaapiv2`, les phrases passent par le routeur vocal du plugin Alexa (`alexaapiv2` → `ai_assistant` → `mcp_jeedom`) : LLM avec le contexte de la maison, MCP en asynchrone, « Veux-tu dire… ? ». Sans le plugin, Frida repasse tout seul sur les interactions du core (voir plus bas).
 - **Contexte** : Jeedom garde le dernier équipement utilisé 5 minutes par profil (« allume le salon » → « et éteins-le ») si les interactions contextuelles sont activées dans Jeedom.
 - **Démarrage par Jeedom** : un scénario dépose une phrase dans une variable, puis fait ouvrir le skill ; Alexa traite cette phrase en premier (voir plus bas).
 
@@ -34,6 +35,8 @@ Skill Alexa autonome qui envoie vos phrases aux **interactions Jeedom** (`intera
 4. Une **clé API** :
    - recommandé : la clé d'un **utilisateur dédié** de profil « Utilisateur » (Réglages → Système → Utilisateurs → colonne clé API) ; ses droits limitent ce que le skill peut faire ;
    - ou la clé API du core (Réglages → Système → Configuration → API), qui donne tous les droits.
+
+   Avec `jeedom_backend=alexaapiv2`, le routeur vocal refuse la clé du core : utilisez la clé d'un utilisateur (valable pour le plugin **et** pour le repli sur le core), ou renseignez `jeedom_plugin_apikey` avec la clé du plugin Alexa.
 
 > Le core Jeedom écrit chaque requête JSON-RPC, clé comprise, dans le log `api` au niveau *info*. Laissez ce log au niveau *error* en production.
 
@@ -63,6 +66,8 @@ Skill Alexa autonome qui envoie vos phrases aux **interactions Jeedom** (`intera
 |---|---|---|
 | `jeedom_url` | — (obligatoire) | URL externe de Jeedom, ex. `https://maison.example.com` |
 | `jeedom_apikey` | — (obligatoire) | Clé API (utilisateur dédié recommandé) |
+| `jeedom_backend` | `core` | `core` : interactions du core. `alexaapiv2` : routeur vocal du plugin Alexa (IA), repli automatique sur le core s'il échoue |
+| `jeedom_plugin_apikey` | vide | Clé envoyée au routeur vocal si elle diffère de `jeedom_apikey` (clé du plugin Alexa) |
 | `jeedom_profile` | vide | Profil passé aux interactions : mémoire de contexte, `#profile#`, restriction « personne » des interactions |
 | `jeedom_dashboard` | `index.php?v=m` | Page ouverte sur Echo Show : chemin Jeedom (ex. `index.php?v=d&p=plan&plan_id=2&fullscreen=1` pour un design) ou URL complète |
 | `jeedom_prompt_variable` | vide | Nom d'une variable de scénario lue à l'ouverture du skill (vide = désactivé) |
@@ -87,6 +92,15 @@ Par défaut « **assistant frida** » (fr), « frida assistant » (en), « frida
 
 La remise à vide passe par `datastore::save`, réservée à la clé API du core ou à un utilisateur **administrateur**. Avec une clé « Utilisateur », videz la variable vous-même dans le scénario (par exemple une minute plus tard), sinon la phrase est rejouée à chaque ouverture. La valeur `none` est ignorée, comme dans l'original.
 
+### IA via le plugin Alexa (`jeedom_backend=alexaapiv2`)
+
+Frida envoie la phrase à `plugins/alexaapiv2/core/php/voiceRouter.php`, le même point d'entrée que le skill `premiumAsk` :
+
+- le plugin choisit : interactions, LLM avec le contexte de la maison (`ai_assistant`), ou client MCP (`mcp_jeedom`) en asynchrone (« Je m'en occupe », la réponse est lue ensuite sur l'Echo) ; ces réglages se font dans le plugin Alexa ;
+- l'identifiant Alexa de l'appareil est envoyé : le plugin le relie à l'Echo (pièce, réponse asynchrone). Ces identifiants sont propres à chaque skill : la liaison se fait d'elle-même au premier usage de Frida sur chaque Echo ;
+- quand Jeedom propose un choix (« Veux-tu dire : Lampe salon ? », « 1 : salon, 2 : cuisine »), répondez « oui », « non », ou le numéro (« deux », « le deuxième ») ;
+- **repli** : si le routeur échoue (plugin absent ou désactivé, clé refusée, erreur), Frida envoie la phrase aux interactions du core, tant qu'il reste au moins 1,5 s. Après un dépassement de délai, pas de repli : le message « trop de temps » est dit.
+
 ### Echo Show
 
 - Le navigateur de l'Echo Show affiche la page de connexion Jeedom la première fois : connectez-vous en cochant « Enregistrer cet appareil ».
@@ -94,7 +108,7 @@ La remise à vide passe par `datastore::save`, réservée à la clé API du core
 
 ### Limites
 
-- **8 secondes** au total côté Alexa : les interactions qui appellent un LLM lent ou un scénario long n'auront pas le temps de répondre (message « Jeedom a mis trop de temps à répondre »).
+- **8 secondes** au total côté Alexa : un LLM lent ou un scénario long n'aura pas le temps de répondre (message « Jeedom a mis trop de temps à répondre »). Pour les traitements longs (MCP), activez le mode asynchrone du plugin Alexa.
 - Le skill reste en mode développement : il n'est utilisable que sur les appareils de votre compte Amazon.
 
 ### Tests
@@ -125,15 +139,16 @@ Les tests n'ont pas besoin du SDK Alexa (stubs dans `tests/conftest.py`). Si `as
 | Configuration | `debug=False` lu comme vrai ; espaces autour de `=` cassaient la clé ; erreur fatale à l'import si la config manque | Booléens lus correctement, espaces tolérés, message vocal « skill non configuré » |
 | Erreurs HTTP | `int(response.status_code, 0)` levait une exception sur les pages d'erreur HTML | Codes HTTP et JSON-RPC classés (auth / injoignable / délai / erreur) |
 | Intentions | `FallbackIntent` et `NavigateHomeIntent` déclarées sans handler ; `CanFulfillIntentRequest` appelait une méthode inexistante du SDK | Handlers ajoutés ; `CanFulfillIntentRequest` retiré (utile seulement aux skills publiés) |
-| Reconnaissance de pièce | `device_id` ajouté à la phrase pour un agent IA | Retiré (les interactions Jeedom ne l'exploitent pas) |
-| Tests | Aucun | 104 tests pytest |
+| IA | Agent de conversation HA (OpenAI, Gemini…) | Option `jeedom_backend=alexaapiv2` : routeur vocal du plugin Alexa (LLM via `ai_assistant`, MCP via `mcp_jeedom`), repli sur les interactions du core |
+| Reconnaissance de pièce | `device_id` ajouté à la phrase pour un agent IA | Identifiant d'appareil envoyé au plugin Alexa, qui le relie à l'Echo (mode `alexaapiv2`) |
+| Tests | Aucun | 145 tests pytest |
 | Langues | 14 (nl-NL avec le nom d'appel espagnol « casa inteligente ») | Les mêmes 14, textes réécrits pour Jeedom, nom d'appel par langue |
 
 ---
 
 ## English
 
-Standalone Alexa skill that sends your sentences to **Jeedom interactions** (`interact::tryToReply` over the core JSON-RPC API) and reads the answer aloud. On an Echo Show it can also open your Jeedom dashboard. No Jeedom plugin is required.
+Standalone Alexa skill that sends your sentences to **Jeedom interactions** (`interact::tryToReply` over the core JSON-RPC API) and reads the answer aloud. On an Echo Show it can also open your Jeedom dashboard. No Jeedom plugin is required; with the Alexa plugin (`alexaapiv2`) installed, Frida can use its voice router for AI (`ai_assistant`, `mcp_jeedom`), with automatic fallback to the core.
 
 > **Credits** — Adapted from [HomeAssistantAssist](https://github.com/fabianosan/HomeAssistantAssist) by **Fabiano Santos** ([@fabianosan](https://github.com/fabianosan)), commit `7dfc40c`. The original repository has **no license**, so all rights remain with its author: this repository is kept **private** for personal use. Ask the author before publishing it.
 
@@ -142,7 +157,7 @@ Standalone Alexa skill that sends your sentences to **Jeedom interactions** (`in
 1. Jeedom reachable **from the Internet over HTTPS with a valid certificate**.
 2. Working Jeedom **interactions** (Tools → Interactions).
 3. Settings → System → Configuration → **API**: JSON-RPC access **Enabled** (not "white IP" / "localhost").
-4. An **API key**: preferably the key of a dedicated Jeedom user with the "User" profile, or the core API key (full rights).
+4. An **API key**: preferably the key of a dedicated Jeedom user with the "User" profile, or the core API key (full rights). With `jeedom_backend=alexaapiv2`, use a user key (accepted by both the plugin and the core) or set `jeedom_plugin_apikey`.
 
 > Jeedom core logs every JSON-RPC request, key included, in the `api` log at *info* level. Keep that log at *error* level.
 
@@ -160,6 +175,8 @@ Standalone Alexa skill that sends your sentences to **Jeedom interactions** (`in
 |---|---|---|
 | `jeedom_url` | — (required) | External Jeedom URL |
 | `jeedom_apikey` | — (required) | API key |
+| `jeedom_backend` | `core` | `core`: core interactions. `alexaapiv2`: voice router of the Alexa plugin (AI via `ai_assistant` / `mcp_jeedom`), automatic fallback to the core |
+| `jeedom_plugin_apikey` | empty | Key sent to the voice router when it differs from `jeedom_apikey` |
 | `jeedom_profile` | empty | Profile sent to interactions (context memory, `#profile#`) |
 | `jeedom_dashboard` | `index.php?v=m` | Page opened on Echo Show: Jeedom path or full URL |
 | `jeedom_prompt_variable` | empty | Scenario variable read (then cleared) when the skill opens |

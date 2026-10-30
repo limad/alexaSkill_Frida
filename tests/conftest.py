@@ -150,7 +150,7 @@ class LambdaContext(object):
 
 
 def make_input(request_type="IntentRequest", intent=None, query=None, locale="fr-FR",
-               apl=False, session=None, lambda_ms=None):
+               apl=False, session=None, lambda_ms=None, person=None):
     slots = {"query": Slot(query)} if intent else {}
     request = types.SimpleNamespace(
         object_type=request_type,
@@ -159,7 +159,8 @@ def make_input(request_type="IntentRequest", intent=None, query=None, locale="fr
     )
     interfaces = types.SimpleNamespace(alexa_presentation_apl=object() if apl else None)
     device = types.SimpleNamespace(device_id="amzn1.ask.device.TEST", supported_interfaces=interfaces)
-    context = types.SimpleNamespace(system=types.SimpleNamespace(device=device))
+    person_ns = types.SimpleNamespace(person_id=person) if person else None
+    context = types.SimpleNamespace(system=types.SimpleNamespace(device=device, person=person_ns))
     return types.SimpleNamespace(
         request_envelope=types.SimpleNamespace(request=request, context=context),
         response_builder=ResponseBuilder(),

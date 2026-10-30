@@ -96,6 +96,43 @@ class TestKeywords:
         assert helpers.split_list(None) == []
 
 
+class TestBackendConfig:
+    def test_default_core(self, tmp_path):
+        assert helpers.load_config(write(tmp_path, ""))["jeedom_backend"] == "core"
+
+    def test_alexaapiv2(self, tmp_path):
+        cfg = helpers.load_config(write(tmp_path, "jeedom_url=https://j\njeedom_apikey=abcdefghijklmnopq\n"
+                                                  "jeedom_backend=AlexaApiV2\njeedom_plugin_apikey=k\n"))
+        assert cfg["jeedom_backend"] == "alexaapiv2"
+        assert cfg["jeedom_plugin_apikey"] == "k"
+        assert helpers.config_errors(cfg) == []
+
+    def test_unknown_backend_reported(self, tmp_path):
+        cfg = helpers.load_config(write(tmp_path, "jeedom_url=https://j\njeedom_apikey=abcdefghijklmnopq\njeedom_backend=ha\n"))
+        assert helpers.config_errors(cfg) == ["jeedom_backend"]
+
+
+class TestParseChoice:
+    FR = helpers.load_locale("fr-FR")
+
+    def choice(self, text, count):
+        return helpers.parse_choice(text, count, self.FR["choice_numbers"], self.FR["choice_yes"])
+
+    @pytest.mark.parametrize("text, count, expected", [
+        ("oui", 1, 0), ("d'accord", 1, 0), ("un", 1, 0),
+        ("2", 3, 1), ("le deuxième", 3, 1), ("deux", 3, 1), ("la troisième", 3, 2), ("numéro 1", 2, 0),
+        ("oui", 3, None), ("4", 3, None), ("cinq", 3, None),
+        ("allume un peu le salon", 1, None), ("éteins la cuisine", 2, None),
+    ])
+    def test_french(self, text, count, expected):
+        assert self.choice(text, count) == expected
+
+    def test_english(self):
+        en = helpers.load_locale("en-US")
+        assert helpers.parse_choice("the second one", 2, en["choice_numbers"], en["choice_yes"]) == 1
+        assert helpers.parse_choice("yes", 1, en["choice_numbers"], en["choice_yes"]) == 0
+
+
 class TestCleanForSpeech:
     def test_none_and_empty(self):
         assert helpers.clean_for_speech(None) == ""

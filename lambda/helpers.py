@@ -17,6 +17,9 @@ DEFAULT_LOCALE = "en-US"
 
 TRUE_VALUES = ("1", "true", "yes", "on", "oui")
 REQUIRED_KEYS = ("jeedom_url", "jeedom_apikey")
+# core : interactions du core (interact::tryToReply).
+# alexaapiv2 : routeur vocal du plugin (interactions, LLM, MCP), repli core si absent.
+BACKENDS = ("core", "alexaapiv2")
 # Valeurs d'exemple de config.cfg : considérées comme « non renseignées ».
 PLACEHOLDER_MARKERS = ("YOUR-", "VOTRE-")
 
@@ -70,6 +73,8 @@ def load_config(path):
     return {
         "jeedom_url": raw.get("jeedom_url", "").rstrip("/"),
         "jeedom_apikey": raw.get("jeedom_apikey", ""),
+        "jeedom_backend": raw.get("jeedom_backend", "").lower() or "core",
+        "jeedom_plugin_apikey": raw.get("jeedom_plugin_apikey", ""),
         "jeedom_profile": raw.get("jeedom_profile", ""),
         "jeedom_dashboard": raw.get("jeedom_dashboard", "") or "index.php?v=m",
         "jeedom_prompt_variable": raw.get("jeedom_prompt_variable", ""),
@@ -89,6 +94,8 @@ def config_errors(config):
         value = str(config.get(key) or "")
         if not value or any(m in value.upper() for m in PLACEHOLDER_MARKERS):
             missing.append(key)
+    if config.get("jeedom_backend", "core") not in BACKENDS:
+        missing.append("jeedom_backend")
     url = str(config.get("jeedom_url") or "")
     if "jeedom_url" not in missing and not re.match(r"^https?://", url, re.I):
         missing.append("jeedom_url")
@@ -154,6 +161,29 @@ def matches_keyword(query, keywords):
 def is_exit_request(query, keywords, max_words=3):
     """Mot de sortie (« non », « merci »…) dans une phrase courte uniquement."""
     return len(normalize(query).split()) <= max_words and matches_keyword(query, keywords)
+
+
+def parse_choice(query, count, numbers, yes_words):
+    """Réponse à un choix proposé par Jeedom (« Veux-tu dire… ? », « 1 : …, 2 : … »).
+
+    Renvoie l'index choisi (0…count-1), ou None si la phrase n'est pas un choix.
+    `numbers` : groupes `un,premier;deux,deuxième;…` (un groupe par rang).
+    """
+    text = normalize(query)
+    if len(text.split()) > 3:
+        return None  # une vraie phrase (« allume un peu le salon ») n'est pas un choix
+    if count == 1 and matches_keyword(text, yes_words):
+        return 0
+    digits = re.findall(r"(?<!\d)(\d{1,2})(?!\d)", text)
+    if len(digits) == 1 and 1 <= int(digits[0]) <= count:
+        return int(digits[0]) - 1
+    # Plusieurs rangs peuvent apparaître (« the second one ») : le mot le plus long gagne.
+    best, best_len = None, 0
+    for index, group in enumerate(split_list(numbers)[:count]):
+        for word in group.split(","):
+            if len(word.strip()) > best_len and matches_keyword(text, word):
+                best, best_len = index, len(word.strip())
+    return best
 
 
 # --------------------------------------------------------------------------

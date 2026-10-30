@@ -25,8 +25,8 @@ class FakeSession(object):
         self.exc = exc
         self.calls = []
 
-    def post(self, url, json=None, timeout=None, verify=None):
-        self.calls.append({"url": url, "json": json, "timeout": timeout, "verify": verify})
+    def post(self, url, json=None, headers=None, timeout=None, verify=None):
+        self.calls.append({"url": url, "json": json, "headers": headers, "timeout": timeout, "verify": verify})
         if self.exc:
             raise self.exc
         return self.response
@@ -131,3 +131,37 @@ class TestVariables:
         call = s.calls[0]["json"]
         assert call["method"] == "datastore::save"
         assert call["params"]["value"] == "" and call["params"]["linkId"] == -1
+
+
+class TestVoiceRouter:
+    def test_request_shape(self):
+        c, s = client(FakeResponse(json_data={"reply": "C'est fait", "matched": True, "route": "voiceQuery"}),
+                      plugin_apikey="cle-plugin-abcdefghijkl")
+        result = c.voice("allume la cuisine", device_id="amzn1.ask.device.X", person_id="p1",
+                         locale="fr-FR", force_exact=True, timeout=6.5)
+        assert result["reply"] == "C'est fait"
+        call = s.calls[0]
+        assert call["url"] == "https://j.example/plugins/alexaapiv2/core/php/voiceRouter.php"
+        assert call["headers"] == {"Authorization": "Bearer cle-plugin-abcdefghijkl"}
+        assert call["json"] == {"query": "allume la cuisine", "deviceSerialNumber": "amzn1.ask.device.X",
+                                "personId": "p1", "locale": "fr-FR", "forceExact": True}
+        assert "apikey" not in call["url"]
+        assert call["timeout"] == (2.0, 4.5)
+
+    def test_main_key_used_when_no_plugin_key(self):
+        c, s = client(FakeResponse(json_data={"reply": "ok"}))
+        c.voice("x")
+        assert s.calls[0]["headers"] == {"Authorization": "Bearer " + APIKEY}
+
+    @pytest.mark.parametrize("response, kind", [
+        (FakeResponse(status=401, json_data={"error": "unauthorized"}), "auth"),
+        (FakeResponse(status=200, json_data={"reply": "", "error": "unauthorized"}), "auth"),
+        (FakeResponse(status=404, text="Not Found"), "error"),
+        (FakeResponse(status=200, text="<html>"), "error"),
+    ])
+    def test_errors(self, response, kind):
+        c, _ = client(response)
+        with pytest.raises(JeedomError) as info:
+            c.voice("x")
+        assert info.value.kind == kind
+        assert APIKEY not in str(info.value)

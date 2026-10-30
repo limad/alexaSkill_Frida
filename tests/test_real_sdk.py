@@ -20,6 +20,8 @@ import lambda_function as lf
 class Client:
     def ask(self, query, timeout=6.0):
         return "Salon : 21.5 °C & sec"
+    def voice(self, query, device_id="", person_id="", locale="", force_exact=False, timeout=6.0):
+        return {"reply": "ids " + device_id + " " + person_id + " " + locale, "matched": True}
     def read_variable(self, name, timeout=2.0):
         return ""
     def write_variable(self, name, value, timeout=2.0):
@@ -48,6 +50,11 @@ out = {}
 out["launch"] = lf.lambda_handler(envelope({"type": "LaunchRequest", "requestId": "r", "timestamp": "2026-10-30T10:00:00Z", "locale": "fr-FR"}), None)
 out["query"] = lf.lambda_handler(envelope(intent("température salon"), new=False, attributes={"conversation": True}), None)
 out["dashboard"] = lf.lambda_handler(envelope(intent("ouvre jeedom")), None)
+lf.configure(dict(lf.CONFIG, jeedom_backend="alexaapiv2"), Client())
+env = envelope(intent("éteins tout"))
+env["context"]["System"]["person"] = {"personId": "amzn1.ask.person.P"}
+env["context"]["System"]["device"]["deviceId"] = "amzn1.ask.device.D"
+out["voice"] = lf.lambda_handler(env, None)
 print(json.dumps(out))
 """
 
@@ -81,3 +88,9 @@ def test_real_sdk_responses():
     ]
     assert dashboard[1]["commands"][0]["type"] == "OpenURL"
     assert dashboard[1]["commands"][0]["source"] == "https://j.example/index.php?v=m"
+
+
+def test_real_sdk_voice_router_ids():
+    out = run_real()
+    speech = out["voice"]["response"]["outputSpeech"]["ssml"]
+    assert speech == "<speak>ids amzn1.ask.device.D amzn1.ask.person.P fr-FR.</speak>"

@@ -50,7 +50,8 @@ def test_interaction_models():
         assert query["samples"] == ["{query}"]
         assert query["slots"] == [{"name": "query", "type": "AMAZON.Person"}]
         for builtin in ("AMAZON.StopIntent", "AMAZON.CancelIntent", "AMAZON.HelpIntent",
-                        "AMAZON.FallbackIntent", "AMAZON.NavigateHomeIntent"):
+                        "AMAZON.FallbackIntent", "AMAZON.NavigateHomeIntent",
+                        "AMAZON.YesIntent", "AMAZON.NoIntent"):
             assert builtin in intents, (path, builtin)
 
 
@@ -72,6 +73,7 @@ def test_example_config_has_no_real_secret():
     cfg = helpers.load_config(os.path.join(ROOT, "lambda/config.cfg"))
     assert helpers.config_errors(cfg) == ["jeedom_url", "jeedom_apikey"]
     assert cfg["debug"] is False
+    assert cfg["jeedom_backend"] == "core"
 
 
 def test_build_zip(tmp_path, monkeypatch):
