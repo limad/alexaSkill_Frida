@@ -1,0 +1,42 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "asistente jeedom",
+      "intents": [
+        {
+          "name": "AMAZON.CancelIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.HelpIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.StopIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.NavigateHomeIntent",
+          "samples": []
+        },
+        {
+          "name": "JeedomQueryIntent",
+          "slots": [
+            {
+              "name": "query",
+              "type": "AMAZON.Person"
+            }
+          ],
+          "samples": [
+            "{query}"
+          ]
+        },
+        {
+          "name": "AMAZON.FallbackIntent",
+          "samples": []
+        }
+      ],
+      "types": []
+    }
+  }
+}
