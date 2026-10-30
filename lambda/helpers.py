@@ -75,6 +75,7 @@ def load_config(path):
         "jeedom_timeout": min(max(timeout, 1.0), MAX_TIMEOUT),
         "verify_ssl": as_bool(raw.get("verify_ssl"), True),
         "keep_session_open": as_bool(raw.get("keep_session_open"), True),
+        "keep_session_open_oneshot": as_bool(raw.get("keep_session_open_oneshot"), False),
         "suppress_greeting": as_bool(raw.get("suppress_greeting"), False),
         "debug": as_bool(raw.get("debug"), False),
     }

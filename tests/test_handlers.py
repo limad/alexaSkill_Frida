@@ -46,6 +46,7 @@ def setup(monkeypatch):
             "jeedom_apikey": APIKEY,
             "jeedom_prompt_variable": "",
             "keep_session_open": True,
+            "keep_session_open_oneshot": False,
             "suppress_greeting": False,
             "jeedom_timeout": 6.5,
         })
@@ -145,6 +146,18 @@ class TestQuery:
         setup(keep_session_open=False)
         rb = run(query("allume la cuisine", session={lf.SESSION_CONVERSATION: True}))
         assert rb.should_end is True
+
+    def test_one_shot_kept_open_with_option(self, setup):
+        # Comportement de l'original (ask_for_further_commands=True).
+        setup(keep_session_open_oneshot=True)
+        rb = run(query("allume la cuisine"))
+        assert rb.should_end is False
+        assert rb.reprompt == "Autre chose ?"
+
+    def test_one_shot_option_independent_of_conversation_option(self, setup):
+        setup(keep_session_open=False, keep_session_open_oneshot=True)
+        assert run(query("test")).should_end is False
+        assert run(query("test", session={lf.SESSION_CONVERSATION: True})).should_end is True
 
     def test_exit_word(self, setup):
         client = setup()

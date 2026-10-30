@@ -15,6 +15,7 @@ class TestConfig:
         cfg = helpers.load_config(str(tmp_path / "absent.cfg"))
         assert cfg["jeedom_dashboard"] == "index.php?v=m"
         assert cfg["keep_session_open"] is True
+        assert cfg["keep_session_open_oneshot"] is False
         assert cfg["debug"] is False
         assert helpers.config_errors(cfg) == ["jeedom_url", "jeedom_apikey"]
 

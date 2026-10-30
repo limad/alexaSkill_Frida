@@ -251,10 +251,13 @@ class QueryIntentHandler(AbstractRequestHandler):
             return failure
         deadline = Deadline(handler_input, CONFIG["jeedom_timeout"])
         speech = ask_jeedom(handler_input, query, deadline)
-        # Session gardée ouverte seulement dans une conversation (« Alexa, ouvre … »).
-        # Une demande directe (« Alexa, demande à … de … ») se termine après la réponse.
-        conversation = bool(session_attributes(handler_input).get(SESSION_CONVERSATION))
-        return respond(handler_input, speech, keep_open=CONFIG["keep_session_open"] and conversation)
+        # Conversation (« Alexa, ouvre … ») : keep_session_open.
+        # Demande directe (« Alexa, demande à … de … ») : keep_session_open_oneshot.
+        if session_attributes(handler_input).get(SESSION_CONVERSATION):
+            keep_open = CONFIG["keep_session_open"]
+        else:
+            keep_open = CONFIG["keep_session_open_oneshot"]
+        return respond(handler_input, speech, keep_open=keep_open)
 
 
 class HelpIntentHandler(AbstractRequestHandler):

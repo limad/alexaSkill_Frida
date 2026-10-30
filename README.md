@@ -21,7 +21,7 @@ Skill Alexa autonome qui envoie vos phrases aux **interactions Jeedom** (`intera
 ```
 
 - **Conversation** : « Alexa, ouvre assistant jeedom », puis enchaînez les demandes ; la session reste ouverte (« Autre chose ? ») jusqu'à un mot de sortie (« non », « merci », « c'est tout »…) ou « stop ».
-- **Demande directe** : « Alexa, demande à assistant jeedom d'allumer la cuisine » ; Alexa répond puis ferme la session.
+- **Demande directe** : « Alexa, demande à assistant jeedom d'allumer la cuisine » ; Alexa répond puis ferme la session (ou la garde ouverte avec `keep_session_open_oneshot=True`, comme l'original).
 - **Dashboard** : « ouvre jeedom », « ouvre le tableau de bord »… ouvre le dashboard dans le navigateur de l'Echo Show. À l'ouverture du skill, l'écran affiche aussi un bouton « Ouvrir Jeedom ».
 - **Contexte** : Jeedom garde le dernier équipement utilisé 5 minutes par profil (« allume le salon » → « et éteins-le ») si les interactions contextuelles sont activées dans Jeedom.
 - **Démarrage par Jeedom** : un scénario dépose une phrase dans une variable, puis fait ouvrir le skill ; Alexa traite cette phrase en premier (voir plus bas).
@@ -65,6 +65,7 @@ Skill Alexa autonome qui envoie vos phrases aux **interactions Jeedom** (`intera
 | `jeedom_timeout` | `6.5` | Délai max (s) laissé à Jeedom, plafonné à 7,5 s (limite Alexa : 8 s au total) |
 | `verify_ssl` | `True` | Vérifier le certificat HTTPS de Jeedom |
 | `keep_session_open` | `True` | Garder la session ouverte après une réponse quand le skill a été ouvert (« Alexa, ouvre … ») |
+| `keep_session_open_oneshot` | `False` | Garder aussi la session ouverte après une demande directe (« Alexa, demande à … de … ») : Alexa demande « Autre chose ? » |
 | `suppress_greeting` | `False` | Ne pas prononcer le message d'accueil à l'ouverture |
 | `debug` | `False` | Logs détaillés dans CloudWatch (la clé API n'y apparaît jamais) |
 
@@ -112,7 +113,7 @@ Les tests n'ont pas besoin du SDK Alexa (stubs dans `tests/conftest.py`). Si `as
 | Suivi de conversation | `conversation_id` en **variable globale** de la Lambda : partagé entre utilisateurs et gardé d'une session à l'autre | Contexte gardé par Jeedom, par profil (`jeedom_profile`) ; rien de partagé dans la Lambda |
 | Écran APL | `is_apl_supported` global, fixé à l'ouverture : un Echo sans écran pouvait recevoir des directives APL après un Echo Show | Détecté à chaque requête, sur l'appareil qui parle |
 | Accueil | Message différent « une fois par jour » via une date globale au fuseau UTC−3 codé en dur | Un seul message d'accueil, sans état global |
-| Session | `ask_for_further_commands` garde aussi ouvertes les demandes directes | Ouverte seulement après « Alexa, ouvre … » ; une demande directe se termine après la réponse |
+| Session | `ask_for_further_commands` garde aussi ouvertes les demandes directes | Deux options : `keep_session_open` (après « Alexa, ouvre … », activée) et `keep_session_open_oneshot` (demande directe, désactivée par défaut ; `True` = comportement de l'original) |
 | Délai | 7 s fixes, plus 5 s de lecture de l'`input_text` à l'ouverture (jusqu'à 12 s > limite Alexa) | Budget unique < 8 s calculé sur le temps restant de la Lambda, message distinct délai / injoignable / clé refusée |
 | Phrase de démarrage | `input_text` HA, non vidée par le skill | Variable de scénario Jeedom, vidée après lecture |
 | Nettoyage vocal | Supprime `-`, `%`, `€`, accents hors liste (« -5 °C » devenait « 5 °C ») | Garde nombres négatifs et unités, retire HTML, markdown, emojis ; virgule décimale pour de/fr/es/it/nl/pt ; échappement SSML (`&`, `<`) |
@@ -121,7 +122,7 @@ Les tests n'ont pas besoin du SDK Alexa (stubs dans `tests/conftest.py`). Si `as
 | Erreurs HTTP | `int(response.status_code, 0)` levait une exception sur les pages d'erreur HTML | Codes HTTP et JSON-RPC classés (auth / injoignable / délai / erreur) |
 | Intentions | `FallbackIntent` et `NavigateHomeIntent` déclarées sans handler ; `CanFulfillIntentRequest` appelait une méthode inexistante du SDK | Handlers ajoutés ; `CanFulfillIntentRequest` retiré (utile seulement aux skills publiés) |
 | Reconnaissance de pièce | `device_id` ajouté à la phrase pour un agent IA | Retiré (les interactions Jeedom ne l'exploitent pas) |
-| Tests | Aucun | 96 tests pytest |
+| Tests | Aucun | 98 tests pytest |
 | Langues | 14 (nl-NL avec le nom d'appel espagnol « casa inteligente ») | Les mêmes 14, textes réécrits pour Jeedom, nom d'appel par langue |
 
 ---
@@ -161,6 +162,7 @@ Standalone Alexa skill that sends your sentences to **Jeedom interactions** (`in
 | `jeedom_timeout` | `6.5` | Max seconds for Jeedom, capped at 7.5 (Alexa limit: 8 s) |
 | `verify_ssl` | `True` | Check Jeedom's HTTPS certificate |
 | `keep_session_open` | `True` | Keep the session open after an answer when the skill was opened |
+| `keep_session_open_oneshot` | `False` | Also keep it open after a one-shot request ("Alexa, ask … to …"), like the original |
 | `suppress_greeting` | `False` | Skip the welcome message |
 | `debug` | `False` | Verbose CloudWatch logs (the API key is never logged) |
 
