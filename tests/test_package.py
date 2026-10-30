@@ -43,7 +43,7 @@ def test_texts_used_by_code_exist():
 def test_interaction_models():
     for path in MODELS:
         model = json.load(open(path, encoding="utf-8"))["interactionModel"]["languageModel"]
-        assert "jeedom" in model["invocationName"], path
+        assert "frida" in model["invocationName"], path
         assert model["invocationName"] == model["invocationName"].lower()
         intents = {i["name"]: i for i in model["intents"]}
         query = intents["JeedomQueryIntent"]

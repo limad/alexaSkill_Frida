@@ -1,7 +1,7 @@
 {
   "interactionModel": {
     "languageModel": {
-      "invocationName": "asistente jeedom",
+      "invocationName": "asistente frida",
       "intents": [
         {
           "name": "AMAZON.CancelIntent",

@@ -15,13 +15,13 @@ Skill Alexa autonome qui envoie vos phrases aux **interactions Jeedom** (`intera
 ### Fonctionnement
 
 ```
-« Alexa, ouvre assistant jeedom »  →  Lambda Alexa-Hosted  →  POST <jeedom>/core/api/jeeApi.php
+« Alexa, ouvre assistant frida »  →  Lambda Alexa-Hosted  →  POST <jeedom>/core/api/jeeApi.php
                                                               méthode interact::tryToReply
 « allume la cuisine »              ←  réponse lue          ←  { "result": { "reply": "C'est fait" } }
 ```
 
-- **Conversation** : « Alexa, ouvre assistant jeedom », puis enchaînez les demandes ; la session reste ouverte (« Autre chose ? ») jusqu'à un mot de sortie (« non », « merci », « c'est tout »…) ou « stop ».
-- **Demande directe** : « Alexa, demande à assistant jeedom d'allumer la cuisine » ; Alexa répond puis ferme la session (ou la garde ouverte avec `keep_session_open_oneshot=True`, comme l'original).
+- **Conversation** : « Alexa, ouvre assistant frida », puis enchaînez les demandes ; la session reste ouverte (« Autre chose ? ») jusqu'à un mot de sortie (« non », « merci », « c'est tout »…) ou « stop ».
+- **Demande directe** : « Alexa, demande à assistant frida d'allumer la cuisine » ; Alexa répond puis ferme la session (ou la garde ouverte avec `keep_session_open_oneshot=True`, comme l'original).
 - **Dashboard** : « ouvre jeedom », « ouvre le tableau de bord »… ouvre le dashboard dans le navigateur de l'Echo Show. À l'ouverture du skill, l'écran affiche aussi un bouton « Ouvrir Jeedom ».
 - **Contexte** : Jeedom garde le dernier équipement utilisé 5 minutes par profil (« allume le salon » → « et éteins-le ») si les interactions contextuelles sont activées dans Jeedom.
 - **Démarrage par Jeedom** : un scénario dépose une phrase dans une variable, puis fait ouvrir le skill ; Alexa traite cette phrase en premier (voir plus bas).
@@ -50,7 +50,7 @@ Skill Alexa autonome qui envoie vos phrases aux **interactions Jeedom** (`intera
    - *Interaction Model* → *JSON Editor* : collez le contenu de `skill-package/interactionModels/custom/fr-FR.json` (une fois par langue ajoutée) ;
    - *Interfaces* : activez **Alexa Presentation Language** et cochez les formats d'écran (Hub Round, Hub Landscape Small/Medium/Large, Hub Portrait, TV Fullscreen, Mobile) ;
    - **Save** puis **Build skill**.
-5. Onglet **Test** : passez de *Off* à **Development**, tapez « ouvre assistant jeedom ».
+5. Onglet **Test** : passez de *Off* à **Development**, tapez « ouvre assistant frida ».
 6. Le skill est actif sur tous les Echo du compte. Pour le retrouver dans l'app Alexa : Plus → Skills et jeux → Vos skills → **Dév.**
 
 ### `config.cfg`
@@ -73,12 +73,12 @@ Les textes et mots-clés (ouverture du dashboard, mots de sortie) sont dans `lam
 
 ### Nom d'appel
 
-Par défaut « **assistant jeedom** » (fr), « jeedom assistant » (en), « jeedom assistent » (de, nl), « asistente jeedom » (es), « assistente jeedom » (it, pt). Pour le changer : Build → *Invocations* → *Skill Invocation Name*, puis **Build skill**. Choisissez un nom de deux mots ou plus, facile à prononcer, différent des autres skills activés.
+Par défaut « **assistant frida** » (fr), « frida assistant » (en), « frida assistent » (de, nl), « asistente frida » (es), « assistente frida » (it, pt). Pour le changer : Build → *Invocations* → *Skill Invocation Name*, puis **Build skill**. Choisissez un nom de deux mots ou plus, facile à prononcer, différent des autres skills activés.
 
 ### Démarrer une conversation depuis Jeedom
 
 1. `config.cfg` : `jeedom_prompt_variable=alexa_prompt`.
-2. Dans un scénario : `variable(alexa_prompt, quelle est la température du salon)`, puis faites ouvrir le skill sur l'Echo voulu (par exemple avec une commande « commande vocale » du plugin Alexa : « ouvre assistant jeedom »).
+2. Dans un scénario : `variable(alexa_prompt, quelle est la température du salon)`, puis faites ouvrir le skill sur l'Echo voulu (par exemple avec une commande « commande vocale » du plugin Alexa : « ouvre assistant frida »).
 3. À l'ouverture, le skill lit la variable, la **vide**, envoie la phrase à Jeedom et garde la session ouverte pour la suite.
 
 La remise à vide passe par `datastore::save`, réservée à la clé API du core ou à un utilisateur **administrateur**. Avec une clé « Utilisateur », videz la variable vous-même dans le scénario (par exemple une minute plus tard), sinon la phrase est rejouée à chaque ouverture. La valeur `none` est ignorée, comme dans l'original.
@@ -147,7 +147,7 @@ Standalone Alexa skill that sends your sentences to **Jeedom interactions** (`in
 1. [Alexa developer console](https://developer.amazon.com/alexa/console/ask) → **Create Skill**: *Other* → **Custom** → **Alexa-hosted (Python)**, hosting region close to you, **Start from Scratch** (*Import skill* only works with a public Git repository).
 2. **Code** tab: replace `lambda_function.py` and `requirements.txt`, add `helpers.py`, `jeedom_client.py`, `config.cfg`, `apl_dashboard.json`, `apl_empty.json` and the `locale/` folder. Fill in `config.cfg`, then **Save** and **Deploy**.
 3. **Build** tab: paste `skill-package/interactionModels/custom/<locale>.json` in the *JSON Editor*, enable **Alexa Presentation Language** under *Interfaces* (all screen formats), **Build skill**.
-4. **Test** tab: set it to **Development** and type "open jeedom assistant".
+4. **Test** tab: set it to **Development** and type "open frida assistant".
 5. The skill works on every Echo of your account (Alexa app → More → Skills & Games → Your Skills → **Dev**).
 
 ### `config.cfg`
@@ -170,7 +170,7 @@ Texts and keywords (open dashboard, exit words) live in `lambda/locale/<locale>.
 
 ### Invocation name
 
-Default: "jeedom assistant" (en), "assistant jeedom" (fr), "jeedom assistent" (de, nl), "asistente jeedom" (es), "assistente jeedom" (it, pt). Change it under Build → *Invocations*, then **Build skill**.
+Default: "frida assistant" (en), "assistant frida" (fr), "frida assistent" (de, nl), "asistente frida" (es), "assistente frida" (it, pt). Change it under Build → *Invocations*, then **Build skill**.
 
 ### Start a conversation from Jeedom
 

@@ -125,7 +125,7 @@
           "smallIconUri": "file://assets/images/common_smallIconUri.png",
           "largeIconUri": "file://assets/images/common_largeIconUri.png",
           "examplePhrases": [
-            "Alexa, öffne jeedom assistent",
+            "Alexa, öffne frida assistent",
             "Schalte das Licht in der Küche ein",
             "Wie warm ist es im Wohnzimmer"
           ]
@@ -137,7 +137,7 @@
           "smallIconUri": "file://assets/images/common_smallIconUri.png",
           "largeIconUri": "file://assets/images/common_largeIconUri.png",
           "examplePhrases": [
-            "Alexa, open jeedom assistant",
+            "Alexa, open frida assistant",
             "Turn on the kitchen light",
             "What is the living room temperature"
           ]
@@ -149,7 +149,7 @@
           "smallIconUri": "file://assets/images/common_smallIconUri.png",
           "largeIconUri": "file://assets/images/common_largeIconUri.png",
           "examplePhrases": [
-            "Alexa, open jeedom assistant",
+            "Alexa, open frida assistant",
             "Turn on the kitchen light",
             "What is the living room temperature"
           ]
@@ -161,7 +161,7 @@
           "smallIconUri": "file://assets/images/common_smallIconUri.png",
           "largeIconUri": "file://assets/images/common_largeIconUri.png",
           "examplePhrases": [
-            "Alexa, open jeedom assistant",
+            "Alexa, open frida assistant",
             "Turn on the kitchen light",
             "What is the living room temperature"
           ]
@@ -173,7 +173,7 @@
           "smallIconUri": "file://assets/images/common_smallIconUri.png",
           "largeIconUri": "file://assets/images/common_largeIconUri.png",
           "examplePhrases": [
-            "Alexa, open jeedom assistant",
+            "Alexa, open frida assistant",
             "Turn on the kitchen light",
             "What is the living room temperature"
           ]
@@ -185,7 +185,7 @@
           "smallIconUri": "file://assets/images/common_smallIconUri.png",
           "largeIconUri": "file://assets/images/common_largeIconUri.png",
           "examplePhrases": [
-            "Alexa, abre asistente jeedom",
+            "Alexa, abre asistente frida",
             "Enciende la luz de la cocina",
             "Qué temperatura hace en el salón"
           ]
@@ -197,7 +197,7 @@
           "smallIconUri": "file://assets/images/common_smallIconUri.png",
           "largeIconUri": "file://assets/images/common_largeIconUri.png",
           "examplePhrases": [
-            "Alexa, abre asistente jeedom",
+            "Alexa, abre asistente frida",
             "Enciende la luz de la cocina",
             "Qué temperatura hace en el salón"
           ]
@@ -209,7 +209,7 @@
           "smallIconUri": "file://assets/images/common_smallIconUri.png",
           "largeIconUri": "file://assets/images/common_largeIconUri.png",
           "examplePhrases": [
-            "Alexa, abre asistente jeedom",
+            "Alexa, abre asistente frida",
             "Enciende la luz de la cocina",
             "Qué temperatura hace en el salón"
           ]
@@ -221,7 +221,7 @@
           "smallIconUri": "file://assets/images/common_smallIconUri.png",
           "largeIconUri": "file://assets/images/common_largeIconUri.png",
           "examplePhrases": [
-            "Alexa, ouvre assistant jeedom",
+            "Alexa, ouvre assistant frida",
             "Allume la lumière de la cuisine",
             "Quelle est la température du salon"
           ]
@@ -233,7 +233,7 @@
           "smallIconUri": "file://assets/images/common_smallIconUri.png",
           "largeIconUri": "file://assets/images/common_largeIconUri.png",
           "examplePhrases": [
-            "Alexa, ouvre assistant jeedom",
+            "Alexa, ouvre assistant frida",
             "Allume la lumière de la cuisine",
             "Quelle est la température du salon"
           ]
@@ -245,7 +245,7 @@
           "smallIconUri": "file://assets/images/common_smallIconUri.png",
           "largeIconUri": "file://assets/images/common_largeIconUri.png",
           "examplePhrases": [
-            "Alexa, apri assistente jeedom",
+            "Alexa, apri assistente frida",
             "Accendi la luce della cucina",
             "Che temperatura c'è in soggiorno"
           ]
@@ -257,7 +257,7 @@
           "smallIconUri": "file://assets/images/common_smallIconUri.png",
           "largeIconUri": "file://assets/images/common_largeIconUri.png",
           "examplePhrases": [
-            "Alexa, open jeedom assistent",
+            "Alexa, open frida assistent",
             "Zet het licht in de keuken aan",
             "Hoe warm is het in de woonkamer"
           ]
@@ -269,7 +269,7 @@
           "smallIconUri": "file://assets/images/common_smallIconUri.png",
           "largeIconUri": "file://assets/images/common_largeIconUri.png",
           "examplePhrases": [
-            "Alexa, abrir assistente jeedom",
+            "Alexa, abrir assistente frida",
             "Acenda a luz da cozinha",
             "Qual é a temperatura da sala"
           ]
@@ -281,13 +281,13 @@
           "smallIconUri": "file://assets/images/common_smallIconUri.png",
           "largeIconUri": "file://assets/images/common_largeIconUri.png",
           "examplePhrases": [
-            "Alexa, abrir assistente jeedom",
+            "Alexa, abrir assistente frida",
             "Acenda a luz da cozinha",
             "Qual é a temperatura da sala"
           ]
         }
       },
-      "testingInstructions": "Fill lambda/config.cfg with a reachable Jeedom URL and API key, then say: open jeedom assistant."
+      "testingInstructions": "Fill lambda/config.cfg with a reachable Jeedom URL and API key, then say: open frida assistant."
     }
   }
 }
