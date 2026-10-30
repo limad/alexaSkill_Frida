@@ -273,18 +273,6 @@
             "Acenda a luz da cozinha",
             "Qual é a temperatura da sala"
           ]
-        },
-        "pt-PT": {
-          "name": "Frida",
-          "summary": "Controle a sua casa por voz através das interações do Jeedom.",
-          "description": "Esta skill envia as suas frases para as interações do seu servidor Jeedom e lê a resposta. Num Echo Show também abre o painel do Jeedom.",
-          "smallIconUri": "file://assets/images/common_smallIconUri.png",
-          "largeIconUri": "file://assets/images/common_largeIconUri.png",
-          "examplePhrases": [
-            "Alexa, abrir assistente frida",
-            "Acenda a luz da cozinha",
-            "Qual é a temperatura da sala"
-          ]
         }
       },
       "testingInstructions": "Fill lambda/config.cfg with a reachable Jeedom URL and API key, then say: open frida assistant."

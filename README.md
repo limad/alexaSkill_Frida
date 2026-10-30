@@ -142,7 +142,7 @@ Les tests n'ont pas besoin du SDK Alexa (stubs dans `tests/conftest.py`). Si `as
 | IA | Agent de conversation HA (OpenAI, Gemini…) | Option `jeedom_backend=alexaapiv2` : routeur vocal du plugin Alexa (LLM via `ai_assistant`, MCP via `mcp_jeedom`), repli sur les interactions du core |
 | Reconnaissance de pièce | `device_id` ajouté à la phrase pour un agent IA | Identifiant d'appareil envoyé au plugin Alexa, qui le relie à l'Echo (mode `alexaapiv2`) |
 | Tests | Aucun | 145 tests pytest |
-| Langues | 14 (nl-NL avec le nom d'appel espagnol « casa inteligente ») | Les mêmes 14, textes réécrits pour Jeedom, nom d'appel par langue |
+| Langues | 14, dont pt-PT que la plateforme Alexa ne propose pas, et nl-NL avec le nom d'appel espagnol « casa inteligente » | 13 langues Alexa, textes réécrits pour Jeedom, nom d'appel par langue |
 
 ---
 

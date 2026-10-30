@@ -15,10 +15,10 @@ def locales(paths):
     return sorted(os.path.splitext(os.path.basename(p))[0] for p in paths)
 
 
-def test_fourteen_languages_everywhere():
+def test_thirteen_languages_everywhere():
     skill = json.load(open(os.path.join(ROOT, "skill-package/skill.json"), encoding="utf-8"))
     published = sorted(skill["manifest"]["publishingInformation"]["locales"])
-    assert len(MODELS) == 14
+    assert len(MODELS) == 13
     assert locales(MODELS) == locales(LANGS) == published
 
 
