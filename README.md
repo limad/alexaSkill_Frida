@@ -1,4 +1,4 @@
-# Jeedom Assist — skill Alexa pour Jeedom (Alexa-Hosted)
+# Frida — skill Alexa pour Jeedom (Alexa-Hosted)
 
 [Français](#français) · [English](#english)
 
@@ -40,12 +40,16 @@ Skill Alexa autonome qui envoie vos phrases aux **interactions Jeedom** (`intera
 ### Installation
 
 1. Dans la [console développeur Alexa](https://developer.amazon.com/alexa/console/ask) : **Create Skill**
-   - nom : `Jeedom Assist` (au choix), langue principale : **French (FR)** ;
+   - nom : `Frida` (au choix), langue principale : **French (FR)** ;
    - type d'expérience : *Other* → modèle **Custom** → hébergement **Alexa-hosted (Python)** ;
    - région d'hébergement : **EU (Ireland)** pour l'Europe ;
    - modèle de départ : **Start from Scratch** (l'option *Import skill* ne fonctionne qu'avec un dépôt Git public).
-2. Onglet **Code** : remplacez `lambda_function.py` et `requirements.txt`, puis ajoutez (bouton *Create File* / *Import Code* avec un zip du dossier `lambda/`) : `helpers.py`, `jeedom_client.py`, `config.cfg`, `apl_dashboard.json`, `apl_empty.json` et le dossier `locale/`.
-3. Renseignez `config.cfg` (voir ci-dessous), puis **Save** et **Deploy**.
+2. Sur votre PC, copiez `lambda/config.cfg` en `lambda/config.local.cfg` (ignoré par git), renseignez-le (voir ci-dessous), puis construisez le paquet :
+   ```bash
+   python build_zip.py
+   ```
+   `lambda.zip` contient le dossier `lambda/` attendu par Amazon, avec votre `config.local.cfg` à la place de `config.cfg`.
+3. Onglet **Code** : **Import Code** → choisissez `lambda.zip`, cochez tous les fichiers → **Import**, puis **Deploy**. (Sans Python : créez les fichiers un par un avec *Create File* et renseignez `config.cfg` dans l'éditeur.)
 4. Onglet **Build** :
    - *Interaction Model* → *JSON Editor* : collez le contenu de `skill-package/interactionModels/custom/fr-FR.json` (une fois par langue ajoutée) ;
    - *Interfaces* : activez **Alexa Presentation Language** et cochez les formats d'écran (Hub Round, Hub Landscape Small/Medium/Large, Hub Portrait, TV Fullscreen, Mobile) ;
@@ -107,7 +111,7 @@ Les tests n'ont pas besoin du SDK Alexa (stubs dans `tests/conftest.py`). Si `as
 
 ### Différences avec HomeAssistantAssist
 
-| Sujet | Original (Home Assistant) | Jeedom Assist |
+| Sujet | Original (Home Assistant) | Frida |
 |---|---|---|
 | Appel serveur | `POST /api/conversation/process`, jeton Bearer | JSON-RPC `interact::tryToReply`, clé API dans le corps |
 | Suivi de conversation | `conversation_id` en **variable globale** de la Lambda : partagé entre utilisateurs et gardé d'une session à l'autre | Contexte gardé par Jeedom, par profil (`jeedom_profile`) ; rien de partagé dans la Lambda |
@@ -122,7 +126,7 @@ Les tests n'ont pas besoin du SDK Alexa (stubs dans `tests/conftest.py`). Si `as
 | Erreurs HTTP | `int(response.status_code, 0)` levait une exception sur les pages d'erreur HTML | Codes HTTP et JSON-RPC classés (auth / injoignable / délai / erreur) |
 | Intentions | `FallbackIntent` et `NavigateHomeIntent` déclarées sans handler ; `CanFulfillIntentRequest` appelait une méthode inexistante du SDK | Handlers ajoutés ; `CanFulfillIntentRequest` retiré (utile seulement aux skills publiés) |
 | Reconnaissance de pièce | `device_id` ajouté à la phrase pour un agent IA | Retiré (les interactions Jeedom ne l'exploitent pas) |
-| Tests | Aucun | 98 tests pytest |
+| Tests | Aucun | 104 tests pytest |
 | Langues | 14 (nl-NL avec le nom d'appel espagnol « casa inteligente ») | Les mêmes 14, textes réécrits pour Jeedom, nom d'appel par langue |
 
 ---
@@ -145,7 +149,7 @@ Standalone Alexa skill that sends your sentences to **Jeedom interactions** (`in
 ### Installation
 
 1. [Alexa developer console](https://developer.amazon.com/alexa/console/ask) → **Create Skill**: *Other* → **Custom** → **Alexa-hosted (Python)**, hosting region close to you, **Start from Scratch** (*Import skill* only works with a public Git repository).
-2. **Code** tab: replace `lambda_function.py` and `requirements.txt`, add `helpers.py`, `jeedom_client.py`, `config.cfg`, `apl_dashboard.json`, `apl_empty.json` and the `locale/` folder. Fill in `config.cfg`, then **Save** and **Deploy**.
+2. Copy `lambda/config.cfg` to `lambda/config.local.cfg` (git-ignored), fill it in, run `python build_zip.py`, then in the **Code** tab use **Import Code** with `lambda.zip` and click **Deploy**.
 3. **Build** tab: paste `skill-package/interactionModels/custom/<locale>.json` in the *JSON Editor*, enable **Alexa Presentation Language** under *Interfaces* (all screen formats), **Build skill**.
 4. **Test** tab: set it to **Development** and type "open frida assistant".
 5. The skill works on every Echo of your account (Alexa app → More → Skills & Games → Your Skills → **Dev**).

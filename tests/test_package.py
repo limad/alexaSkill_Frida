@@ -72,3 +72,25 @@ def test_example_config_has_no_real_secret():
     cfg = helpers.load_config(os.path.join(ROOT, "lambda/config.cfg"))
     assert helpers.config_errors(cfg) == ["jeedom_url", "jeedom_apikey"]
     assert cfg["debug"] is False
+
+
+def test_build_zip(tmp_path, monkeypatch):
+    import sys
+    import zipfile
+    sys.path.insert(0, ROOT)
+    import build_zip
+
+    lambda_dir = tmp_path / "lambda"
+    (lambda_dir / "locale").mkdir(parents=True)
+    (lambda_dir / "__pycache__").mkdir()
+    (lambda_dir / "lambda_function.py").write_text("x", encoding="utf-8")
+    (lambda_dir / "config.cfg").write_text("jeedom_apikey=VOTRE-CLE", encoding="utf-8")
+    (lambda_dir / "config.local.cfg").write_text("jeedom_apikey=vraie-cle", encoding="utf-8")
+    (lambda_dir / "locale" / "fr-FR.lang").write_text("a=b", encoding="utf-8")
+    (lambda_dir / "__pycache__" / "x.pyc").write_bytes(b"")
+    monkeypatch.setattr(build_zip, "LAMBDA_DIR", str(lambda_dir))
+
+    with zipfile.ZipFile(build_zip.build(str(tmp_path / "out.zip"))) as archive:
+        names = sorted(archive.namelist())
+        assert names == ["lambda/config.cfg", "lambda/lambda_function.py", "lambda/locale/fr-FR.lang"]
+        assert archive.read("lambda/config.cfg") == b"jeedom_apikey=vraie-cle"
