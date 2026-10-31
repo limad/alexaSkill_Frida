@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-"""Skill Alexa « Frida » : envoie la phrase de l'utilisateur aux interactions Jeedom.
+"""Skill Alexa « Frida » : envoie la phrase de l'utilisateur au routeur vocal du
+plugin Jeedom alexaapiv2 (interactions, IA), seul endpoint Jeedom appelé.
 
 Adapté de HomeAssistantAssist (https://github.com/fabianosan/HomeAssistantAssist)
 de Fabiano Santos — voir README.md.
@@ -36,8 +37,6 @@ RESPONSE_RESERVE = 0.8
 SESSION_CONVERSATION = "conversation"
 # Clé de session : choix proposés par Jeedom, en attente de « oui » ou d'un numéro.
 SESSION_OPTIONS = "options"
-# Temps minimal restant pour tenter le repli sur le core après un échec du plugin.
-FALLBACK_MIN_TIME = 1.5
 
 ERROR_TEXT_KEYS = {
     "timeout": "alexa_speak_timeout",
@@ -81,9 +80,7 @@ def get_client():
         _client = JeedomClient(
             CONFIG["jeedom_url"],
             CONFIG["jeedom_apikey"],
-            profile=CONFIG["jeedom_profile"],
             verify_ssl=CONFIG["verify_ssl"],
-            plugin_apikey=CONFIG["jeedom_plugin_apikey"],
         )
     return _client
 
@@ -184,33 +181,18 @@ class Turn(object):
 
     # Jeedom ---------------------------------------------------------------
     def ask_jeedom(self, query, deadline, force_exact=False):
-        """Phrase -> Jeedom -> (texte prêt à être dit, choix proposés ou None).
-
-        Backend alexaapiv2 : routeur vocal du plugin (interactions, IA, MCP) ; en cas
-        d'échec (plugin absent, erreur), repli sur les interactions du core s'il reste
-        du temps. Message clair si tout échoue.
-        """
-        client = get_client()
-        if CONFIG["jeedom_backend"] == "alexaapiv2":
-            try:
-                result = client.voice(query, device_id=self.device_id, person_id=self.person_id,
-                                      locale=self.locale, force_exact=force_exact,
-                                      timeout=deadline.remaining())
-                logger.debug("voiceRouter : route=%s matched=%s", result.get("route"), result.get("matched"))
-                options = result.get("options") if result.get("ambiguous") else None
-                options = [str(o) for o in options if str(o).strip()] if isinstance(options, list) else None
-                return self.speech(result.get("reply")), (options or None)
-            except JeedomError as e:
-                if e.kind == "timeout" or deadline.left() < FALLBACK_MIN_TIME:
-                    logger.error("voiceRouter en échec (%s) : %s", e.kind, e.detail)
-                    return self.texts[ERROR_TEXT_KEYS.get(e.kind, "alexa_speak_error")], None
-                logger.warning("voiceRouter en échec (%s) : %s -> repli interactions du core", e.kind, e.detail)
+        """Phrase -> routeur vocal du plugin -> (texte prêt à être dit, choix proposés ou None)."""
         try:
-            reply = client.ask(query, timeout=deadline.remaining())
+            result = get_client().voice(query, device_id=self.device_id, person_id=self.person_id,
+                                        locale=self.locale, force_exact=force_exact,
+                                        timeout=deadline.remaining())
         except JeedomError as e:
-            logger.error("Appel Jeedom en échec (%s) : %s", e.kind, e.detail)
+            logger.error("Routeur vocal Jeedom en échec (%s) : %s", e.kind, e.detail)
             return self.texts[ERROR_TEXT_KEYS.get(e.kind, "alexa_speak_error")], None
-        return self.speech(reply), None
+        logger.debug("voiceRouter : route=%s matched=%s", result.get("route"), result.get("matched"))
+        options = result.get("options") if result.get("ambiguous") else None
+        options = [str(o) for o in options if str(o).strip()] if isinstance(options, list) else None
+        return self.speech(result.get("reply")), (options or None)
 
     def speech(self, reply):
         reply = "" if reply is None else str(reply)
@@ -275,27 +257,6 @@ class Turn(object):
         return self.builder.response
 
 
-def consume_prompt(deadline):
-    """Phrase déposée dans une variable Jeedom pour démarrer la conversation ('' sinon)."""
-    name = CONFIG["jeedom_prompt_variable"]
-    if not name:
-        return ""
-    client = get_client()
-    try:
-        prompt = client.read_variable(name, timeout=deadline.remaining(cap=2.0))
-    except JeedomError as e:
-        logger.error("Lecture de la variable de démarrage impossible (%s) : %s", e.kind, e.detail)
-        return ""
-    if not prompt or prompt.lower() == "none":
-        return ""
-    try:
-        # Vidée tout de suite : la phrase ne doit servir qu'une fois.
-        client.write_variable(name, "", timeout=deadline.remaining(cap=1.5))
-    except JeedomError as e:
-        logger.warning("Variable de démarrage non vidée (%s) : %s", e.kind, e.detail)
-    return prompt
-
-
 # --------------------------------------------------------------------------
 # Handlers
 # --------------------------------------------------------------------------
@@ -309,14 +270,6 @@ class LaunchRequestHandler(AbstractRequestHandler):
         if failure:
             return failure
         turn.session[SESSION_CONVERSATION] = True
-        deadline = Deadline(handler_input, CONFIG["jeedom_timeout"])
-
-        prompt = consume_prompt(deadline)
-        if prompt:
-            logger.info("Démarrage avec la phrase de la variable Jeedom")
-            speech, options = turn.ask_jeedom(prompt, deadline)
-            return turn.answer(speech, options, keep_open=True)
-
         if turn.has_screen:
             turn.show_home_screen()
         if CONFIG["suppress_greeting"]:

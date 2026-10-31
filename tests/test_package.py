@@ -73,7 +73,7 @@ def test_example_config_has_no_real_secret():
     cfg = helpers.load_config(os.path.join(ROOT, "lambda/config.cfg"))
     assert helpers.config_errors(cfg) == ["jeedom_url", "jeedom_apikey"]
     assert cfg["debug"] is False
-    assert cfg["jeedom_backend"] == "core"
+    assert "jeedom_backend" not in cfg and "jeedom_prompt_variable" not in cfg
 
 
 def test_build_zip(tmp_path, monkeypatch):

@@ -16,10 +16,8 @@ LOCALE_DIR = os.path.join(BASE_DIR, "locale")
 DEFAULT_LOCALE = "en-US"
 
 TRUE_VALUES = ("1", "true", "yes", "on", "oui")
+# jeedom_apikey : clé API du plugin alexaapiv2 (jamais la clé du core).
 REQUIRED_KEYS = ("jeedom_url", "jeedom_apikey")
-# core : interactions du core (interact::tryToReply).
-# alexaapiv2 : routeur vocal du plugin (interactions, LLM, MCP), repli core si absent.
-BACKENDS = ("core", "alexaapiv2")
 # Valeurs d'exemple de config.cfg : considérées comme « non renseignées ».
 PLACEHOLDER_MARKERS = ("YOUR-", "VOTRE-")
 
@@ -73,11 +71,7 @@ def load_config(path):
     return {
         "jeedom_url": raw.get("jeedom_url", "").rstrip("/"),
         "jeedom_apikey": raw.get("jeedom_apikey", ""),
-        "jeedom_backend": raw.get("jeedom_backend", "").lower() or "core",
-        "jeedom_plugin_apikey": raw.get("jeedom_plugin_apikey", ""),
-        "jeedom_profile": raw.get("jeedom_profile", ""),
         "jeedom_dashboard": raw.get("jeedom_dashboard", "") or "index.php?v=m",
-        "jeedom_prompt_variable": raw.get("jeedom_prompt_variable", ""),
         "jeedom_timeout": min(max(timeout, 1.0), MAX_TIMEOUT),
         "verify_ssl": as_bool(raw.get("verify_ssl"), True),
         "keep_session_open": as_bool(raw.get("keep_session_open"), True),
@@ -94,8 +88,6 @@ def config_errors(config):
         value = str(config.get(key) or "")
         if not value or any(m in value.upper() for m in PLACEHOLDER_MARKERS):
             missing.append(key)
-    if config.get("jeedom_backend", "core") not in BACKENDS:
-        missing.append("jeedom_backend")
     url = str(config.get("jeedom_url") or "")
     if "jeedom_url" not in missing and not re.match(r"^https?://", url, re.I):
         missing.append("jeedom_url")
