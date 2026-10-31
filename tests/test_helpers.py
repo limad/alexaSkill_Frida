@@ -47,8 +47,8 @@ class TestConfig:
         assert helpers.config_errors(cfg) == ["jeedom_url"]
 
     def test_comments_ignored(self, tmp_path):
-        cfg = helpers.load_config(write(tmp_path, "# jeedom_profile=x\njeedom_profile=salon\n"))
-        assert cfg["jeedom_profile"] == "salon"
+        cfg = helpers.load_config(write(tmp_path, "# jeedom_dashboard=x\njeedom_dashboard=salon\n"))
+        assert cfg["jeedom_dashboard"] == "salon"
 
 
 class TestLocale:
@@ -96,20 +96,12 @@ class TestKeywords:
         assert helpers.split_list(None) == []
 
 
-class TestBackendConfig:
-    def test_default_core(self, tmp_path):
-        assert helpers.load_config(write(tmp_path, ""))["jeedom_backend"] == "core"
-
-    def test_alexaapiv2(self, tmp_path):
+class TestPluginOnlyConfig:
+    def test_core_options_ignored(self, tmp_path):
         cfg = helpers.load_config(write(tmp_path, "jeedom_url=https://j\njeedom_apikey=abcdefghijklmnopq\n"
-                                                  "jeedom_backend=AlexaApiV2\njeedom_plugin_apikey=k\n"))
-        assert cfg["jeedom_backend"] == "alexaapiv2"
-        assert cfg["jeedom_plugin_apikey"] == "k"
+                                                  "jeedom_backend=core\njeedom_profile=x\njeedom_prompt_variable=v\n"))
+        assert set(cfg) & {"jeedom_backend", "jeedom_plugin_apikey", "jeedom_profile", "jeedom_prompt_variable"} == set()
         assert helpers.config_errors(cfg) == []
-
-    def test_unknown_backend_reported(self, tmp_path):
-        cfg = helpers.load_config(write(tmp_path, "jeedom_url=https://j\njeedom_apikey=abcdefghijklmnopq\njeedom_backend=ha\n"))
-        assert helpers.config_errors(cfg) == ["jeedom_backend"]
 
 
 class TestParseChoice:

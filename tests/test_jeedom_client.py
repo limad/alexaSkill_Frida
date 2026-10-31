@@ -37,49 +37,20 @@ def client(response=None, exc=None, **kwargs):
     return JeedomClient("https://j.example/", APIKEY, session=session, **kwargs), session
 
 
-def ok(result):
-    return FakeResponse(json_data={"jsonrpc": "2.0", "id": 1, "result": result})
-
-
-class TestAsk:
-    def test_request_shape(self):
-        c, s = client(ok({"reply": "C'est fait"}), profile="Salon", verify_ssl=False)
-        assert c.ask("allume le salon", timeout=3.0) == "C'est fait"
-        call = s.calls[0]
-        assert call["url"] == "https://j.example/core/api/jeeApi.php"
-        assert call["json"]["method"] == "interact::tryToReply"
-        assert call["json"]["params"] == {"query": "allume le salon", "profile": "Salon", "apikey": APIKEY}
-        assert call["timeout"] == (1.5, 1.5)  # connexion + lecture = budget
-        assert call["verify"] is False
-
-    def test_no_profile_param_when_empty(self):
-        c, s = client(ok({"reply": "ok"}))
-        c.ask("test")
-        assert "profile" not in s.calls[0]["json"]["params"]
-
-    @pytest.mark.parametrize("result, expected", [
-        ({"reply": None}, ""), ({}, ""), ("texte", "texte"), (True, ""), ({"reply": 21.5}, "21.5"),
-    ])
-    def test_result_variants(self, result, expected):
-        c, _ = client(ok(result))
-        assert c.ask("x") == expected
+def voice_ok(data=None):
+    return FakeResponse(json_data=data or {"reply": "ok", "matched": True})
 
 
 class TestErrors:
     def kind_of(self, **kwargs):
         c, _ = client(**kwargs)
         with pytest.raises(JeedomError) as info:
-            c.ask("x")
+            c.voice("x")
         assert APIKEY not in str(info.value)
         return info.value.kind
 
     def test_timeout(self):
         assert self.kind_of(exc=requests.exceptions.ReadTimeout()) == "timeout"
-
-    def test_timeout_split_between_connect_and_read(self):
-        c, s = client(ok({"reply": "ok"}))
-        c.ask("x", timeout=6.5)
-        assert s.calls[0]["timeout"] == (2.0, 4.5)
 
     def test_connect_timeout_means_unreachable(self):
         assert self.kind_of(exc=requests.exceptions.ConnectTimeout()) == "unreachable"
@@ -90,68 +61,31 @@ class TestErrors:
     def test_ssl_error(self):
         assert self.kind_of(exc=requests.exceptions.SSLError()) == "unreachable"
 
-    @pytest.mark.parametrize("code", [-32001, -32002, -32701])
-    def test_jsonrpc_auth_codes(self, code):
-        resp = FakeResponse(json_data={"jsonrpc": "2.0", "error": {"code": code, "message": "refusé"}})
-        assert self.kind_of(response=resp) == "auth"
-
-    def test_jsonrpc_other_error(self):
-        resp = FakeResponse(json_data={"jsonrpc": "2.0", "error": {"code": -32500, "message": "Aucune méthode"}})
-        assert self.kind_of(response=resp) == "error"
-
     def test_http_403(self):
         assert self.kind_of(response=FakeResponse(status=403, text="<html>")) == "auth"
 
     def test_http_500(self):
         assert self.kind_of(response=FakeResponse(status=500, text="<html>")) == "error"
 
-    def test_html_instead_of_json(self):
-        assert self.kind_of(response=FakeResponse(status=200, text="<html>login</html>")) == "error"
-
-    def test_json_without_result(self):
-        assert self.kind_of(response=FakeResponse(json_data={"jsonrpc": "2.0"})) == "error"
-
-
-class TestVariables:
-    def test_read_variable(self):
-        c, s = client(ok({"id": "3", "type": "scenario", "link_id": "-1", "key": "alexa_prompt", "value": " Bonjour "}))
-        assert c.read_variable("alexa_prompt") == "Bonjour"
-        params = s.calls[0]["json"]["params"]
-        assert s.calls[0]["json"]["method"] == "datastore::byTypeLinkIdKey"
-        assert params["type"] == "scenario" and params["linkId"] == -1 and params["key"] == "alexa_prompt"
-
-    @pytest.mark.parametrize("result", [[], False, None, {"value": None}])
-    def test_missing_variable(self, result):
-        c, _ = client(ok(result))
-        assert c.read_variable("absente") == ""
-
-    def test_write_variable(self):
-        c, s = client(ok("ok"))
-        c.write_variable("alexa_prompt", "")
-        call = s.calls[0]["json"]
-        assert call["method"] == "datastore::save"
-        assert call["params"]["value"] == "" and call["params"]["linkId"] == -1
+    def test_json_not_object(self):
+        assert self.kind_of(response=FakeResponse(json_data=["x"])) == "error"
 
 
 class TestVoiceRouter:
     def test_request_shape(self):
         c, s = client(FakeResponse(json_data={"reply": "C'est fait", "matched": True, "route": "voiceQuery"}),
-                      plugin_apikey="cle-plugin-abcdefghijkl")
+                      verify_ssl=False)
         result = c.voice("allume la cuisine", device_id="amzn1.ask.device.X", person_id="p1",
                          locale="fr-FR", force_exact=True, timeout=6.5)
         assert result["reply"] == "C'est fait"
         call = s.calls[0]
         assert call["url"] == "https://j.example/plugins/alexaapiv2/core/php/voiceRouter.php"
-        assert call["headers"] == {"Authorization": "Bearer cle-plugin-abcdefghijkl"}
+        assert call["headers"] == {"Authorization": "Bearer " + APIKEY}
         assert call["json"] == {"query": "allume la cuisine", "deviceSerialNumber": "amzn1.ask.device.X",
                                 "personId": "p1", "locale": "fr-FR", "forceExact": True}
         assert "apikey" not in call["url"]
-        assert call["timeout"] == (2.0, 4.5)
-
-    def test_main_key_used_when_no_plugin_key(self):
-        c, s = client(FakeResponse(json_data={"reply": "ok"}))
-        c.voice("x")
-        assert s.calls[0]["headers"] == {"Authorization": "Bearer " + APIKEY}
+        assert call["timeout"] == (2.0, 4.5)  # connexion + lecture = budget
+        assert call["verify"] is False
 
     @pytest.mark.parametrize("response, kind", [
         (FakeResponse(status=401, json_data={"error": "unauthorized"}), "auth"),
@@ -165,3 +99,10 @@ class TestVoiceRouter:
             c.voice("x")
         assert info.value.kind == kind
         assert APIKEY not in str(info.value)
+
+
+def test_only_plugin_endpoint():
+    """Le skill n'a aucun moyen d'appeler l'API du core."""
+    c, _ = client(voice_ok())
+    assert not hasattr(c, "call") and not hasattr(c, "ask")
+    assert not hasattr(c, "read_variable") and not hasattr(c, "write_variable")
