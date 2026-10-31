@@ -1,0 +1,82 @@
+{
+  "type": "APL",
+  "version": "1.6",
+  "theme": "dark",
+  "description": "Écran d'accueil Frida : bouton d'ouverture du dashboard.",
+  "mainTemplate": {
+    "parameters": ["payload"],
+    "items": [
+      {
+        "type": "Container",
+        "width": "100vw",
+        "height": "100vh",
+        "alignItems": "center",
+        "justifyContent": "center",
+        "paddingLeft": "${viewport.shape == 'round' ? '12vw' : '5vw'}",
+        "paddingRight": "${viewport.shape == 'round' ? '12vw' : '5vw'}",
+        "bind": [
+          { "name": "small", "value": "${viewport.width < 600 || viewport.shape == 'round'}" },
+          { "name": "large", "value": "${viewport.width >= 1280}" }
+        ],
+        "items": [
+          {
+            "type": "Frame",
+            "position": "absolute",
+            "top": 0,
+            "left": 0,
+            "width": "100vw",
+            "height": "100vh",
+            "backgroundColor": "#1f2a33"
+          },
+          {
+            "type": "Text",
+            "text": "${payload.jeedom.title}",
+            "fontSize": "${small ? '36dp' : (large ? '80dp' : '60dp')}",
+            "fontWeight": "bold",
+            "color": "#94ca02",
+            "textAlign": "center"
+          },
+          {
+            "type": "Text",
+            "text": "${payload.jeedom.welcome}",
+            "fontSize": "${small ? '20dp' : (large ? '44dp' : '32dp')}",
+            "color": "#ffffff",
+            "textAlign": "center",
+            "marginTop": "${small ? '8dp' : '20dp'}"
+          },
+          {
+            "type": "Text",
+            "text": "${payload.jeedom.hint}",
+            "fontSize": "${small ? '14dp' : (large ? '26dp' : '20dp')}",
+            "color": "#c7d0d8",
+            "textAlign": "center",
+            "marginTop": "${small ? '8dp' : '24dp'}",
+            "display": "${small ? 'none' : 'normal'}"
+          },
+          {
+            "type": "TouchWrapper",
+            "marginTop": "${small ? '16dp' : '40dp'}",
+            "onPress": { "type": "OpenURL", "source": "${payload.jeedom.url}" },
+            "item": {
+              "type": "Frame",
+              "backgroundColor": "#94ca02",
+              "borderRadius": "12dp",
+              "item": {
+                "type": "Text",
+                "text": "${payload.jeedom.button}",
+                "fontSize": "${small ? '20dp' : (large ? '40dp' : '30dp')}",
+                "fontWeight": "bold",
+                "color": "#1f2a33",
+                "textAlign": "center",
+                "paddingTop": "${small ? '10dp' : '18dp'}",
+                "paddingBottom": "${small ? '10dp' : '18dp'}",
+                "paddingLeft": "${small ? '20dp' : '48dp'}",
+                "paddingRight": "${small ? '20dp' : '48dp'}"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
