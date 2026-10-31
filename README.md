@@ -6,7 +6,7 @@ Skill Alexa autonome qui envoie vos phrases aux **interactions Jeedom** (`intera
 
 > **Crédits** — Adaptation de [HomeAssistantAssist](https://github.com/fabianosan/HomeAssistantAssist) de **Fabiano Santos** ([@fabianosan](https://github.com/fabianosan)), version du commit `7dfc40c` (16/10/2025). Le principe (intention unique `{query}` + slot `AMAZON.Person`, écran APL avec bouton, mots de sortie, 14 langues, démarrage par phrase pré-enregistrée) vient de ce projet.
 >
-> **Licence** — le dépôt d'origine ne publie **aucune licence** (ni fichier `LICENSE`, ni licence déclarée sur GitHub). Par défaut, tous les droits restent à son auteur : ce dépôt est donc gardé **privé**, pour un usage personnel. Avant toute publication, demander l'accord de l'auteur (issue sur le dépôt d'origine) ou qu'il ajoute une licence.
+> **Licence** — le dépôt d'origine ne publie **aucune licence** (ni fichier `LICENSE`, ni licence déclarée sur GitHub). Ce projet reprend son principe, avec un code réécrit pour Jeedom, et le crédite ci-dessus. Pour toute remarque de l'auteur d'origine, ouvrez une issue sur ce dépôt.
 
 ---
 
@@ -42,11 +42,15 @@ Skill Alexa autonome qui envoie vos phrases aux **interactions Jeedom** (`intera
 
 ### Installation
 
+**Avec le plugin Alexa (`alexaapiv2`)** : page du plugin → *Skills Alexa* → **Déployer Skill Frida**. Le plugin télécharge ce dépôt, crée un utilisateur Jeedom dédié (`frida`, profil Utilisateur), génère `config.cfg`, puis crée ou met à jour le skill sur votre compte développeur Amazon (code, 13 langues, compilation, activation). Relancez le bouton après chaque mise à jour du dépôt.
+
+**À la main** (sans le plugin) :
+
 1. Dans la [console développeur Alexa](https://developer.amazon.com/alexa/console/ask) : **Create Skill**
    - nom : `Frida` (au choix), langue principale : **French (FR)** ;
    - type d'expérience : *Other* → modèle **Custom** → hébergement **Alexa-hosted (Python)** ;
    - région d'hébergement : **EU (Ireland)** pour l'Europe ;
-   - modèle de départ : **Start from Scratch** (l'option *Import skill* ne fonctionne qu'avec un dépôt Git public).
+   - modèle de départ : **Import skill** avec l'URL de ce dépôt (`https://github.com/limad/alexaSkill_Frida.git`), ou **Start from Scratch**.
 2. Sur votre PC, copiez `lambda/config.cfg` en `lambda/config.local.cfg` (ignoré par git), renseignez-le (voir ci-dessous), puis construisez le paquet :
    ```bash
    python build_zip.py
@@ -150,7 +154,7 @@ Les tests n'ont pas besoin du SDK Alexa (stubs dans `tests/conftest.py`). Si `as
 
 Standalone Alexa skill that sends your sentences to **Jeedom interactions** (`interact::tryToReply` over the core JSON-RPC API) and reads the answer aloud. On an Echo Show it can also open your Jeedom dashboard. No Jeedom plugin is required; with the Alexa plugin (`alexaapiv2`) installed, Frida can use its voice router for AI (`ai_assistant`, `mcp_jeedom`), with automatic fallback to the core.
 
-> **Credits** — Adapted from [HomeAssistantAssist](https://github.com/fabianosan/HomeAssistantAssist) by **Fabiano Santos** ([@fabianosan](https://github.com/fabianosan)), commit `7dfc40c`. The original repository has **no license**, so all rights remain with its author: this repository is kept **private** for personal use. Ask the author before publishing it.
+> **Credits** — Adapted from [HomeAssistantAssist](https://github.com/fabianosan/HomeAssistantAssist) by **Fabiano Santos** ([@fabianosan](https://github.com/fabianosan)), commit `7dfc40c`. The original repository has **no license**; this project reuses its concept with code rewritten for Jeedom and credits it above. The original author can reach us through an issue on this repository.
 
 ### Requirements
 
@@ -163,7 +167,11 @@ Standalone Alexa skill that sends your sentences to **Jeedom interactions** (`in
 
 ### Installation
 
-1. [Alexa developer console](https://developer.amazon.com/alexa/console/ask) → **Create Skill**: *Other* → **Custom** → **Alexa-hosted (Python)**, hosting region close to you, **Start from Scratch** (*Import skill* only works with a public Git repository).
+**With the Alexa plugin (`alexaapiv2`)**: plugin page → *Skills Alexa* → **Déployer Skill Frida** (downloads this repository, creates a dedicated Jeedom user, writes `config.cfg`, creates or updates the skill, builds and enables it).
+
+**Manually**:
+
+1. [Alexa developer console](https://developer.amazon.com/alexa/console/ask) → **Create Skill**: *Other* → **Custom** → **Alexa-hosted (Python)**, hosting region close to you, **Import skill** with this repository's URL, or **Start from Scratch**.
 2. Copy `lambda/config.cfg` to `lambda/config.local.cfg` (git-ignored), fill it in, run `python build_zip.py`, then in the **Code** tab use **Import Code** with `lambda.zip` and click **Deploy**.
 3. **Build** tab: paste `skill-package/interactionModels/custom/<locale>.json` in the *JSON Editor*, enable **Alexa Presentation Language** under *Interfaces* (all screen formats), **Build skill**.
 4. **Test** tab: set it to **Development** and type "open frida assistant".
