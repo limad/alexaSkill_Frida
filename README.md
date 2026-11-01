@@ -36,25 +36,19 @@ Skill Alexa qui envoie vos phrases au **plugin Jeedom Alexa** (`alexaapiv2`) et 
 
 **Avec le plugin Alexa (`alexaapiv2`)** : page du plugin → *Skills Alexa* → **Déployer Skill Frida**. Le plugin télécharge ce dépôt, génère `config.py` (URL externe et clé du plugin), puis crée ou met à jour le skill sur votre compte développeur Amazon (code, 13 langues, compilation, activation). Relancez le bouton après chaque mise à jour du dépôt.
 
-**À la main** (sans le plugin) :
+**À la main** (sans le plugin), tout se fait dans la [console développeur Alexa](https://developer.amazon.com/alexa/console/ask) :
 
-1. Dans la [console développeur Alexa](https://developer.amazon.com/alexa/console/ask) : **Create Skill**
+1. **Create Skill**
    - nom : `Frida` (au choix), langue principale : **French (FR)** ;
    - type d'expérience : *Other* → modèle **Custom** → hébergement **Alexa-hosted (Python)** ;
    - région d'hébergement : **EU (Ireland)** pour l'Europe ;
-   - modèle de départ : **Import skill** avec l'URL de ce dépôt (`https://github.com/limad/alexaSkill_Frida.git`), ou **Start from Scratch**.
-2. Sur votre PC, copiez `lambda/config.py` en `lambda/config.local.py` (ignoré par git), renseignez-le (voir ci-dessous), puis construisez le paquet :
-   ```bash
-   python build_zip.py
-   ```
-   `lambda.zip` contient le dossier `lambda/` attendu par Amazon, avec votre `config.local.py` à la place de `config.py`.
-3. Onglet **Code** : **Import Code** → choisissez `lambda.zip`, cochez tous les fichiers → **Import**, puis **Deploy**. (Sans Python : créez les fichiers un par un avec *Create File* et renseignez `config.py` dans l'éditeur.)
-4. Onglet **Build** :
-   - *Interaction Model* → *JSON Editor* : collez le contenu de `skill-package/interactionModels/custom/fr-FR.json` (une fois par langue ajoutée) ;
-   - *Interfaces* : activez **Alexa Presentation Language** et cochez les formats d'écran (Hub Round, Hub Landscape Small/Medium/Large, Hub Portrait, TV Fullscreen, Mobile) ;
-   - **Save** puis **Build skill**.
-5. Onglet **Test** : passez de *Off* à **Development**, tapez « ouvre assistant frida ».
-6. Le skill est actif sur tous les Echo du compte. Pour le retrouver dans l'app Alexa : Plus → Skills et jeux → Vos skills → **Dév.**
+   - modèle de départ : **Import skill** avec l'URL de ce dépôt (`https://github.com/limad/alexaSkill_Frida.git`).
+
+   Amazon importe tout le dépôt : le code (`lambda/`), la fiche du skill avec l'écran APL (`skill-package/skill.json`), les icônes et les modèles vocaux de chaque langue.
+2. Onglet **Code** : ouvrez `lambda/config.py`, renseignez-le (voir ci-dessous), puis **Save** et **Deploy**.
+3. Onglet **Build** : **Build skill**.
+4. Onglet **Test** : passez de *Off* à **Development**, tapez « ouvre assistant frida ».
+5. Le skill est actif sur tous les Echo du compte. Pour le retrouver dans l'app Alexa : Plus → Skills et jeux → Vos skills → **Dév.**
 
 ### `config.py`
 
@@ -148,11 +142,11 @@ Alexa skill that sends your sentences to the **Jeedom Alexa plugin** (`alexaapiv
 
 **With the Alexa plugin (`alexaapiv2`)**: plugin page → *Skills Alexa* → **Déployer Skill Frida** (downloads this repository, writes `config.py` with the external URL and the plugin key, creates or updates the skill, builds and enables it).
 
-**Manually**:
+**Manually**, everything happens in the [Alexa developer console](https://developer.amazon.com/alexa/console/ask):
 
-1. [Alexa developer console](https://developer.amazon.com/alexa/console/ask) → **Create Skill**: *Other* → **Custom** → **Alexa-hosted (Python)**, hosting region close to you, **Import skill** with this repository's URL, or **Start from Scratch**.
-2. Copy `lambda/config.py` to `lambda/config.local.py` (git-ignored), fill it in, run `python build_zip.py`, then in the **Code** tab use **Import Code** with `lambda.zip` and click **Deploy**.
-3. **Build** tab: paste `skill-package/interactionModels/custom/<locale>.json` in the *JSON Editor*, enable **Alexa Presentation Language** under *Interfaces* (all screen formats), **Build skill**.
+1. **Create Skill**: *Other* → **Custom** → **Alexa-hosted (Python)**, hosting region close to you, template **Import skill** with this repository's URL. Amazon imports the whole repository: code (`lambda/`), skill manifest with the APL screen (`skill-package/skill.json`), icons and the voice models of every language.
+2. **Code** tab: open `lambda/config.py`, fill it in (see below), then **Save** and **Deploy**.
+3. **Build** tab: **Build skill**.
 4. **Test** tab: set it to **Development** and type "open frida assistant".
 5. The skill works on every Echo of your account (Alexa app → More → Skills & Games → Your Skills → **Dev**).
 
