@@ -84,7 +84,9 @@ class TestVoiceRouter:
         assert call["json"] == {"query": "allume la cuisine", "deviceSerialNumber": "amzn1.ask.device.X",
                                 "personId": "p1", "locale": "fr-FR", "forceExact": True}
         assert "apikey" not in call["url"]
-        assert call["timeout"] == (2.0, 4.5)  # connexion + lecture = budget
+        # Délai total : la connexion ne réserve pas sa part quand elle est immédiate.
+        assert call["timeout"].total == 6.5
+        assert call["timeout"].connect_timeout == 2.0
         assert call["verify"] is False
 
     @pytest.mark.parametrize("response, kind", [
@@ -106,3 +108,10 @@ def test_only_plugin_endpoint():
     c, _ = client(voice_ok())
     assert not hasattr(c, "call") and not hasattr(c, "ask")
     assert not hasattr(c, "read_variable") and not hasattr(c, "write_variable")
+
+
+def test_short_budget_halves_connect():
+    c, s = client(voice_ok())
+    c.voice("x", timeout=1.0)
+    assert s.calls[0]["timeout"].total == 1.0
+    assert s.calls[0]["timeout"].connect_timeout == 0.5

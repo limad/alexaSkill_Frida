@@ -7,6 +7,7 @@ l'API du core ni sa clé. La clé voyage dans l'en-tête Authorization, jamais d
 l'URL, et n'apparaît ni dans les messages d'erreur ni dans les logs.
 """
 import requests
+from urllib3.util import Timeout
 
 # Part maximale du budget réservée à l'ouverture de connexion (DNS + TCP + TLS).
 CONNECT_TIMEOUT = 2.0
@@ -34,13 +35,14 @@ class JeedomClient(object):
 
     def _post_json(self, url, payload, timeout, label, headers=None):
         """POST JSON, contrôle HTTP et décodage. Renvoie le dict de la réponse."""
-        # requests applique le délai à la connexion PUIS à la lecture : on partage le
-        # budget entre les deux pour que le total reste sous `timeout`.
+        # Délai total unique (connexion + attente de la réponse) : urllib3 retire le
+        # temps réellement passé à se connecter. Un couple (connexion, lecture) fixe
+        # perdait la part de connexion même quand celle-ci était immédiate.
         connect = min(CONNECT_TIMEOUT, timeout / 2.0)
-        read = max(timeout - connect, 0.3)
         try:
             resp = self.session.post(url, json=payload, headers=headers,
-                                     timeout=(connect, read), verify=self.verify_ssl)
+                                     timeout=Timeout(total=timeout, connect=connect),
+                                     verify=self.verify_ssl)
         except requests.exceptions.ConnectTimeout:
             raise JeedomError("unreachable", "connexion > {:.1f} s".format(connect))
         except requests.exceptions.Timeout:
