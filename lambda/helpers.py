@@ -6,7 +6,6 @@ Aucune dépendance à ask-sdk ni à requests : tout est testable directement.
 import functools
 import glob
 import html
-import importlib.util
 import os
 import re
 import unicodedata
@@ -65,13 +64,15 @@ def as_float(value, default):
 def read_config_module(path):
     """Constantes en majuscules de config.py, en minuscules. Une faute de frappe
     (guillemet oublié…) ou un fichier absent donnent {} au lieu d'une exception."""
+    # Lu et exécuté directement (pas d'import) : aucun cache __pycache__ qui pourrait
+    # resservir une ancienne version du fichier réécrit dans la même seconde.
     try:
-        spec = importlib.util.spec_from_file_location("skill_config", path)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+        with open(path, encoding="utf-8") as f:
+            values = {}
+            exec(compile(f.read(), path, "exec"), values)
     except Exception:  # SyntaxError, OSError…
         return {}
-    return {k.lower(): v for k, v in vars(module).items() if k.isupper()}
+    return {k.lower(): v for k, v in values.items() if k.isupper()}
 
 
 def as_text(value):

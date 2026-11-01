@@ -55,6 +55,11 @@ class TestConfig:
         cfg = helpers.load_config(write(tmp_path, 'JEEDOM_URL = "https://jeedom.example\nJEEDOM_APIKEY = "abcdefghijklmnopq"\n'))
         assert helpers.config_errors(cfg) == ["jeedom_url", "jeedom_apikey"]
 
+    def test_rewrite_same_size_is_reread(self, tmp_path):
+        # Deux réécritures de même longueur dans la même seconde : pas de valeur en cache.
+        assert helpers.load_config(write(tmp_path, 'DEBUG = "aaa"\n'))["debug"] is False
+        assert helpers.load_config(write(tmp_path, 'DEBUG = "yes"\n'))["debug"] is True
+
     def test_lowercase_names_ignored(self, tmp_path):
         cfg = helpers.load_config(write(tmp_path, 'jeedom_url = "https://j.example"\n'))
         assert cfg["jeedom_url"] == ""
