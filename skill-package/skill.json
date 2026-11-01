@@ -118,6 +118,30 @@
       "category": "SMART_HOME",
       "isAvailableWorldwide": true,
       "locales": {
+        "fr-FR": {
+          "name": "Frida",
+          "summary": "Pilotez votre maison à la voix grâce aux interactions de votre Jeedom.",
+          "description": "Ce skill envoie vos phrases aux interactions de votre serveur Jeedom et lit la réponse. Sur un Echo Show, il ouvre aussi votre dashboard Jeedom.",
+          "smallIconUri": "file://assets/images/common_smallIconUri.png",
+          "largeIconUri": "file://assets/images/common_largeIconUri.png",
+          "examplePhrases": [
+            "Alexa, ouvre assistant frida",
+            "Allume la lumière de la cuisine",
+            "Quelle est la température du salon"
+          ]
+        },
+        "fr-CA": {
+          "name": "Frida",
+          "summary": "Pilotez votre maison à la voix grâce aux interactions de votre Jeedom.",
+          "description": "Ce skill envoie vos phrases aux interactions de votre serveur Jeedom et lit la réponse. Sur un Echo Show, il ouvre aussi votre dashboard Jeedom.",
+          "smallIconUri": "file://assets/images/common_smallIconUri.png",
+          "largeIconUri": "file://assets/images/common_largeIconUri.png",
+          "examplePhrases": [
+            "Alexa, ouvre assistant frida",
+            "Allume la lumière de la cuisine",
+            "Quelle est la température du salon"
+          ]
+        },
         "de-DE": {
           "name": "Frida",
           "summary": "Steuere dein Zuhause per Sprache über die Interaktionen deines Jeedom.",
@@ -212,30 +236,6 @@
             "Alexa, abre asistente frida",
             "Enciende la luz de la cocina",
             "Qué temperatura hace en el salón"
-          ]
-        },
-        "fr-CA": {
-          "name": "Frida",
-          "summary": "Pilotez votre maison à la voix grâce aux interactions de votre Jeedom.",
-          "description": "Ce skill envoie vos phrases aux interactions de votre serveur Jeedom et lit la réponse. Sur un Echo Show, il ouvre aussi votre dashboard Jeedom.",
-          "smallIconUri": "file://assets/images/common_smallIconUri.png",
-          "largeIconUri": "file://assets/images/common_largeIconUri.png",
-          "examplePhrases": [
-            "Alexa, ouvre assistant frida",
-            "Allume la lumière de la cuisine",
-            "Quelle est la température du salon"
-          ]
-        },
-        "fr-FR": {
-          "name": "Frida",
-          "summary": "Pilotez votre maison à la voix grâce aux interactions de votre Jeedom.",
-          "description": "Ce skill envoie vos phrases aux interactions de votre serveur Jeedom et lit la réponse. Sur un Echo Show, il ouvre aussi votre dashboard Jeedom.",
-          "smallIconUri": "file://assets/images/common_smallIconUri.png",
-          "largeIconUri": "file://assets/images/common_largeIconUri.png",
-          "examplePhrases": [
-            "Alexa, ouvre assistant frida",
-            "Allume la lumière de la cuisine",
-            "Quelle est la température du salon"
           ]
         },
         "it-IT": {
