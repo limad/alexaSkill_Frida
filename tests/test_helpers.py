@@ -5,50 +5,64 @@ import helpers
 
 
 def write(tmp_path, text):
-    path = tmp_path / "config.cfg"
+    path = tmp_path / "config.py"
     path.write_text(text, encoding="utf-8")
     return str(path)
 
 
 class TestConfig:
     def test_defaults_when_file_missing(self, tmp_path):
-        cfg = helpers.load_config(str(tmp_path / "absent.cfg"))
+        cfg = helpers.load_config(str(tmp_path / "absent.py"))
         assert cfg["jeedom_dashboard"] == "index.php?v=m"
         assert cfg["keep_session_open"] is True
         assert cfg["keep_session_open_oneshot"] is False
         assert cfg["debug"] is False
         assert helpers.config_errors(cfg) == ["jeedom_url", "jeedom_apikey"]
 
-    def test_spaces_around_equal_and_trailing_slash(self, tmp_path):
-        cfg = helpers.load_config(write(tmp_path, "jeedom_url = https://jeedom.example/ \njeedom_apikey= abcdefghijklmnopq\n"))
+    def test_spaces_and_trailing_slash(self, tmp_path):
+        cfg = helpers.load_config(write(tmp_path, 'JEEDOM_URL = " https://jeedom.example/ "\nJEEDOM_APIKEY= "abcdefghijklmnopq"\n'))
         assert cfg["jeedom_url"] == "https://jeedom.example"
         assert cfg["jeedom_apikey"] == "abcdefghijklmnopq"
         assert helpers.config_errors(cfg) == []
 
-    def test_false_string_is_false(self, tmp_path):
-        # L'original faisait bool("False") == True : debug toujours actif.
-        cfg = helpers.load_config(write(tmp_path, "debug=False\nverify_ssl=false\nkeep_session_open=0\n"))
+    def test_booleans_python_or_text(self, tmp_path):
+        # Saisie à la main : False, "False", "false" ou 0 valent faux.
+        cfg = helpers.load_config(write(tmp_path, 'DEBUG = False\nVERIFY_SSL = "false"\nKEEP_SESSION_OPEN = 0\n'))
         assert cfg["debug"] is False
         assert cfg["verify_ssl"] is False
         assert cfg["keep_session_open"] is False
 
     def test_timeout_is_capped_below_alexa_limit(self, tmp_path):
-        assert helpers.load_config(write(tmp_path, "jeedom_timeout=30"))["jeedom_timeout"] == helpers.MAX_TIMEOUT
-        assert helpers.load_config(write(tmp_path, "jeedom_timeout=0"))["jeedom_timeout"] == 1.0
-        assert helpers.load_config(write(tmp_path, "jeedom_timeout=4,5"))["jeedom_timeout"] == 4.5
-        assert helpers.load_config(write(tmp_path, "jeedom_timeout=abc"))["jeedom_timeout"] == helpers.DEFAULT_TIMEOUT
+        assert helpers.load_config(write(tmp_path, "JEEDOM_TIMEOUT = 30"))["jeedom_timeout"] == helpers.MAX_TIMEOUT
+        assert helpers.load_config(write(tmp_path, "JEEDOM_TIMEOUT = 0"))["jeedom_timeout"] == 1.0
+        assert helpers.load_config(write(tmp_path, 'JEEDOM_TIMEOUT = "4,5"'))["jeedom_timeout"] == 4.5
+        assert helpers.load_config(write(tmp_path, 'JEEDOM_TIMEOUT = "abc"'))["jeedom_timeout"] == helpers.DEFAULT_TIMEOUT
 
     def test_placeholders_are_reported(self, tmp_path):
-        cfg = helpers.load_config(write(tmp_path, "jeedom_url=https://VOTRE-URL-JEEDOM-EXTERNE\njeedom_apikey=VOTRE-CLE-API-JEEDOM\n"))
+        cfg = helpers.load_config(write(tmp_path, 'JEEDOM_URL = "https://VOTRE-URL-JEEDOM-EXTERNE"\nJEEDOM_APIKEY = "VOTRE-CLE-API-JEEDOM"\n'))
         assert helpers.config_errors(cfg) == ["jeedom_url", "jeedom_apikey"]
 
     def test_url_without_scheme_is_reported(self, tmp_path):
-        cfg = helpers.load_config(write(tmp_path, "jeedom_url=jeedom.example\njeedom_apikey=abcdefghijklmnopq\n"))
+        cfg = helpers.load_config(write(tmp_path, 'JEEDOM_URL = "jeedom.example"\nJEEDOM_APIKEY = "abcdefghijklmnopq"\n'))
         assert helpers.config_errors(cfg) == ["jeedom_url"]
 
     def test_comments_ignored(self, tmp_path):
-        cfg = helpers.load_config(write(tmp_path, "# jeedom_dashboard=x\njeedom_dashboard=salon\n"))
+        cfg = helpers.load_config(write(tmp_path, '# JEEDOM_DASHBOARD = "x"\nJEEDOM_DASHBOARD = "salon"\n'))
         assert cfg["jeedom_dashboard"] == "salon"
+
+    def test_typo_gives_not_configured_instead_of_crash(self, tmp_path):
+        # Guillemet oublié : le skill doit répondre « non configuré », pas planter à l'import.
+        cfg = helpers.load_config(write(tmp_path, 'JEEDOM_URL = "https://jeedom.example\nJEEDOM_APIKEY = "abcdefghijklmnopq"\n'))
+        assert helpers.config_errors(cfg) == ["jeedom_url", "jeedom_apikey"]
+
+    def test_rewrite_same_size_is_reread(self, tmp_path):
+        # Deux réécritures de même longueur dans la même seconde : pas de valeur en cache.
+        assert helpers.load_config(write(tmp_path, 'DEBUG = "aaa"\n'))["debug"] is False
+        assert helpers.load_config(write(tmp_path, 'DEBUG = "yes"\n'))["debug"] is True
+
+    def test_lowercase_names_ignored(self, tmp_path):
+        cfg = helpers.load_config(write(tmp_path, 'jeedom_url = "https://j.example"\n'))
+        assert cfg["jeedom_url"] == ""
 
 
 class TestLocale:
@@ -98,8 +112,8 @@ class TestKeywords:
 
 class TestPluginOnlyConfig:
     def test_core_options_ignored(self, tmp_path):
-        cfg = helpers.load_config(write(tmp_path, "jeedom_url=https://j\njeedom_apikey=abcdefghijklmnopq\n"
-                                                  "jeedom_backend=core\njeedom_profile=x\njeedom_prompt_variable=v\n"))
+        cfg = helpers.load_config(write(tmp_path, 'JEEDOM_URL = "https://j"\nJEEDOM_APIKEY = "abcdefghijklmnopq"\n'
+                                                  'JEEDOM_BACKEND = "core"\nJEEDOM_PROFILE = "x"\nJEEDOM_PROMPT_VARIABLE = "v"\n'))
         assert set(cfg) & {"jeedom_backend", "jeedom_plugin_apikey", "jeedom_profile", "jeedom_prompt_variable"} == set()
         assert helpers.config_errors(cfg) == []
 

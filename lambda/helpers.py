@@ -18,7 +18,7 @@ DEFAULT_LOCALE = "en-US"
 TRUE_VALUES = ("1", "true", "yes", "on", "oui")
 # jeedom_apikey : clé API du plugin alexaapiv2 (jamais la clé du core).
 REQUIRED_KEYS = ("jeedom_url", "jeedom_apikey")
-# Valeurs d'exemple de config.cfg : considérées comme « non renseignées ».
+# Valeurs d'exemple de config.py : considérées comme « non renseignées ».
 PLACEHOLDER_MARKERS = ("YOUR-", "VOTRE-")
 
 # Le délai Alexa est de 8 s au total : on garde une marge pour la Lambda.
@@ -33,7 +33,7 @@ MAX_SPEECH_LENGTH = 6000
 
 
 # --------------------------------------------------------------------------
-# Fichiers clé=valeur (config.cfg et locale/*.lang)
+# Fichiers clé=valeur (locale/*.lang)
 # --------------------------------------------------------------------------
 def parse_kv_file(path):
     """Lit un fichier `clé=valeur` (lignes vides et `#` ignorées, espaces retirés)."""
@@ -61,17 +61,32 @@ def as_float(value, default):
         return default
 
 
-def load_config(path):
-    """Charge config.cfg et renvoie un dict typé. Ne lève jamais d'exception."""
+def read_config_module(path):
+    """Constantes en majuscules de config.py, en minuscules. Une faute de frappe
+    (guillemet oublié…) ou un fichier absent donnent {} au lieu d'une exception."""
+    # Lu et exécuté directement (pas d'import) : aucun cache __pycache__ qui pourrait
+    # resservir une ancienne version du fichier réécrit dans la même seconde.
     try:
-        raw = parse_kv_file(path)
-    except OSError:
-        raw = {}
+        with open(path, encoding="utf-8") as f:
+            values = {}
+            exec(compile(f.read(), path, "exec"), values)
+    except Exception:  # SyntaxError, OSError…
+        return {}
+    return {k.lower(): v for k, v in values.items() if k.isupper()}
+
+
+def as_text(value):
+    return "" if value is None else str(value).strip()
+
+
+def load_config(path):
+    """Charge config.py et renvoie un dict typé. Ne lève jamais d'exception."""
+    raw = read_config_module(path)
     timeout = as_float(raw.get("jeedom_timeout"), DEFAULT_TIMEOUT)
     return {
-        "jeedom_url": raw.get("jeedom_url", "").rstrip("/"),
-        "jeedom_apikey": raw.get("jeedom_apikey", ""),
-        "jeedom_dashboard": raw.get("jeedom_dashboard", "") or "index.php?v=m",
+        "jeedom_url": as_text(raw.get("jeedom_url")).rstrip("/"),
+        "jeedom_apikey": as_text(raw.get("jeedom_apikey")),
+        "jeedom_dashboard": as_text(raw.get("jeedom_dashboard")) or "index.php?v=m",
         "jeedom_timeout": min(max(timeout, 1.0), MAX_TIMEOUT),
         "verify_ssl": as_bool(raw.get("verify_ssl"), True),
         "keep_session_open": as_bool(raw.get("keep_session_open"), True),
