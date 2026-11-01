@@ -22,7 +22,7 @@ Skill Alexa qui envoie vos phrases au **plugin Jeedom Alexa** (`alexaapiv2`) et 
 
 - **Conversation** : « Alexa, ouvre assistant frida », puis enchaînez les demandes ; la session reste ouverte (« Autre chose ? ») jusqu'à un mot de sortie (« non », « merci », « c'est tout »…) ou « stop ».
 - **Demande directe** : « Alexa, demande à assistant frida d'allumer la cuisine » ; Alexa répond puis ferme la session (ou la garde ouverte avec `keep_session_open_oneshot=True`, comme l'original).
-- **Dashboard** : « ouvre jeedom », « ouvre le tableau de bord »… ouvre le dashboard dans le navigateur de l'Echo Show. À l'ouverture du skill, l'écran affiche aussi un bouton « Ouvrir Jeedom ».
+- **Dashboard** : « ouvre jeedom », « ouvre le tableau de bord »… ouvre le dashboard dans le navigateur de l'Echo Show. L'écran affiche aussi un bouton « Ouvrir Jeedom », avec le message d'accueil à l'ouverture du skill, puis le texte de chaque réponse.
 - **Plugin Alexa** : le plugin choisit la voie (interactions, LLM avec le contexte de la maison, MCP en asynchrone) et peut demander « Veux-tu dire… ? » (voir plus bas).
 - **Questions des scénarios** : pour qu'un scénario pose une question et attende votre réponse, utilisez le skill `premiumAsk` du plugin Alexa, pas Frida.
 
@@ -34,7 +34,7 @@ Skill Alexa qui envoie vos phrases au **plugin Jeedom Alexa** (`alexaapiv2`) et 
 
 ### Installation
 
-**Avec le plugin Alexa (`alexaapiv2`)** : page du plugin → *Skills Alexa* → **Déployer Skill Frida**. Le plugin télécharge ce dépôt, génère `config.py` (URL externe et clé du plugin), puis crée ou met à jour le skill sur votre compte développeur Amazon (code, 13 langues, compilation, activation). Relancez le bouton après chaque mise à jour du dépôt.
+**Avec le plugin Alexa (`alexaapiv2`)** : page du plugin → *Skills Alexa* → **Déployer Skill Frida**. Le plugin télécharge ce dépôt, génère `config.py` (URL externe et clé du plugin), puis crée ou met à jour le skill sur votre compte développeur Amazon (code, 7 langues, compilation, activation). Relancez le bouton après chaque mise à jour du dépôt.
 
 **À la main** (sans le plugin), tout se fait dans la [console développeur Alexa](https://developer.amazon.com/alexa/console/ask) :
 
@@ -59,7 +59,7 @@ Une ligne par réglage : texte entre guillemets (`JEEDOM_URL = "https://…"`), 
 | `JEEDOM_URL` | — (obligatoire) | URL externe de Jeedom, ex. `"https://maison.example.com"` |
 | `JEEDOM_APIKEY` | — (obligatoire) | Clé API du plugin Alexa (`alexaapiv2`) |
 | `JEEDOM_DASHBOARD` | `"index.php?v=m"` | Page ouverte sur Echo Show : chemin Jeedom (ex. `index.php?v=d&p=plan&plan_id=2&fullscreen=1` pour un design) ou URL complète |
-| `JEEDOM_TIMEOUT` | `6.5` | Délai max (s) laissé à Jeedom, plafonné à 7,5 s (limite Alexa : 8 s au total) |
+| `JEEDOM_TIMEOUT` | `6.5` | Délai max (s) laissé à Jeedom, connexion comprise, plafonné à 7,5 s (limite Alexa : 8 s au total) |
 | `VERIFY_SSL` | `True` | Vérifier le certificat HTTPS de Jeedom |
 | `KEEP_SESSION_OPEN` | `True` | Garder la session ouverte après une réponse quand le skill a été ouvert (« Alexa, ouvre … ») |
 | `KEEP_SESSION_OPEN_ONESHOT` | `False` | Garder aussi la session ouverte après une demande directe (« Alexa, demande à … de … ») : Alexa demande « Autre chose ? » |
@@ -70,19 +70,21 @@ Les textes et mots-clés (ouverture du dashboard, mots de sortie) sont dans `lam
 
 ### Nom d'appel
 
-Par défaut « **assistant frida** » (fr), « frida assistant » (en), « frida assistent » (de, nl), « asistente frida » (es), « assistente frida » (it, pt). Pour le changer : Build → *Invocations* → *Skill Invocation Name*, puis **Build skill**. Choisissez un nom de deux mots ou plus, facile à prononcer, différent des autres skills activés.
+Par défaut « **assistant frida** » (fr), « frida assistant » (en), « frida assistent » (de), « asistente frida » (es). Pour le changer : Build → *Invocations* → *Skill Invocation Name*, puis **Build skill**. Choisissez un nom de deux mots ou plus, facile à prononcer, différent des autres skills activés.
 
 ### Plugin Alexa : IA et choix
 
 Frida envoie la phrase à `plugins/alexaapiv2/core/php/voiceRouter.php`, le même point d'entrée que le skill `premiumAsk` :
 
-- le plugin choisit : interactions, LLM avec le contexte de la maison (`ai_assistant`), ou client MCP (`mcp_jeedom`) en asynchrone (« Je m'en occupe », la réponse est lue ensuite sur l'Echo) ; ces réglages se font dans le plugin Alexa ;
+- le plugin choisit : interactions, LLM avec le contexte de la maison (`ai_assistant`), ou client MCP (`mcp_jeedom`) en asynchrone (« Je m'en occupe », la réponse est lue ensuite sur l'Echo et Frida ferme la session) ; ces réglages se font dans le plugin Alexa ;
+- un Echo désactivé dans le plugin Alexa reçoit « Cet appareil n'est pas autorisé… » et Frida ferme la session ;
 - l'identifiant Alexa de l'appareil est envoyé : le plugin le relie à l'Echo (pièce, réponse asynchrone). Ces identifiants sont propres à chaque skill : la liaison se fait d'elle-même au premier usage de Frida sur chaque Echo ;
 - quand Jeedom propose un choix (« Veux-tu dire : Lampe salon ? », « 1 : salon, 2 : cuisine »), répondez « oui », « non », ou le numéro (« deux », « le deuxième ») ;
 - en cas d'échec (plugin désactivé, clé refusée, délai dépassé), Frida dit pourquoi ; il n'existe pas de repli sur le core.
 
 ### Echo Show
 
+- Chaque réponse de Jeedom est affichée à l'écran (8 lignes au plus, 4 sur petit écran), au-dessus du bouton « Ouvrir Jeedom ».
 - Le navigateur de l'Echo Show affiche la page de connexion Jeedom la première fois : connectez-vous en cochant « Enregistrer cet appareil ».
 - `index.php?v=m` (version mobile) est le plus lisible sur petit écran ; un design en `fullscreen=1` convient aux Echo Show 10/15.
 
@@ -128,7 +130,7 @@ Les tests n'ont pas besoin du SDK Alexa (stubs dans `tests/conftest.py`). Si `as
 
 ## English
 
-Alexa skill that sends your sentences to the **Jeedom Alexa plugin** (`alexaapiv2`) and reads the answer aloud: Jeedom interactions, AI (`ai_assistant`, `mcp_jeedom`). On an Echo Show it can also open your Jeedom dashboard. Frida only calls the plugin's voice endpoint, with the plugin API key — never the core API nor its key.
+Alexa skill that sends your sentences to the **Jeedom Alexa plugin** (`alexaapiv2`) and reads the answer aloud: Jeedom interactions, AI (`ai_assistant`, `mcp_jeedom`). On an Echo Show it also shows each answer on screen and can open your Jeedom dashboard. Frida only calls the plugin's voice endpoint, with the plugin API key — never the core API nor its key.
 
 > **Credits** — Adapted from [HomeAssistantAssist](https://github.com/fabianosan/HomeAssistantAssist) by **Fabiano Santos** ([@fabianosan](https://github.com/fabianosan)), commit `7dfc40c`. The original repository has **no license**; this project reuses its concept with code rewritten for Jeedom and credits it above. The original author can reach us through an issue on this repository.
 
@@ -159,7 +161,7 @@ One line per setting: text in quotes (`JEEDOM_URL = "https://…"`), `True` / `F
 | `JEEDOM_URL` | — (required) | External Jeedom URL |
 | `JEEDOM_APIKEY` | — (required) | API key of the Alexa plugin (`alexaapiv2`) |
 | `JEEDOM_DASHBOARD` | `"index.php?v=m"` | Page opened on Echo Show: Jeedom path or full URL |
-| `JEEDOM_TIMEOUT` | `6.5` | Max seconds for Jeedom, capped at 7.5 (Alexa limit: 8 s) |
+| `JEEDOM_TIMEOUT` | `6.5` | Max seconds for Jeedom, connection included, capped at 7.5 (Alexa limit: 8 s) |
 | `VERIFY_SSL` | `True` | Check Jeedom's HTTPS certificate |
 | `KEEP_SESSION_OPEN` | `True` | Keep the session open after an answer when the skill was opened |
 | `KEEP_SESSION_OPEN_ONESHOT` | `False` | Also keep it open after a one-shot request ("Alexa, ask … to …"), like the original |
@@ -170,7 +172,7 @@ Texts and keywords (open dashboard, exit words) live in `lambda/locale/<locale>.
 
 ### Invocation name
 
-Default: "frida assistant" (en), "assistant frida" (fr), "frida assistent" (de, nl), "asistente frida" (es), "assistente frida" (it, pt). Change it under Build → *Invocations*, then **Build skill**.
+Default: "frida assistant" (en), "assistant frida" (fr), "frida assistent" (de), "asistente frida" (es). Change it under Build → *Invocations*, then **Build skill**.
 
 ### Scenario questions
 

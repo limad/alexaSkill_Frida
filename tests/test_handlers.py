@@ -176,6 +176,37 @@ class TestQuery:
         assert APIKEY not in caplog.text
 
 
+class TestReplyScreen:
+    def test_reply_shown_on_screen_device(self, setup):
+        setup(FakeClient(reply="Salon : 21.5 °C & sec <3"))
+        rb = run(query("température salon", apl=True))
+        assert len(rb.directives) == 1
+        directive = rb.directives[0]
+        assert isinstance(directive, RenderDocumentDirective)
+        data = directive.datasources["jeedom"]
+        assert data["welcome"] == "Salon : 21,5 °C &amp; sec &lt;3."
+        assert data["hint"] == ""
+        assert data["url"] == "https://j.example/index.php?v=m"
+
+    def test_no_directive_without_screen(self, setup):
+        setup()
+        assert run(query("température salon")).directives == []
+
+    def test_error_and_choice_shown_too(self, setup):
+        setup(FakeClient(error=JeedomError("timeout", "voiceRouter")))
+        rb = run(query("x", apl=True))
+        assert "trop de temps" in rb.directives[0].datasources["jeedom"]["welcome"]
+        setup(FakeClient(voice_results=[AMBIGUOUS]))
+        rb = run(query("allume", apl=True))
+        assert "Laquelle" in rb.directives[0].datasources["jeedom"]["welcome"]
+
+    def test_launch_screen_keeps_hint(self, setup):
+        setup()
+        data = run(make_input("LaunchRequest", apl=True)).directives[0].datasources["jeedom"]
+        assert data["welcome"] == "Bienvenue à la maison !"
+        assert data["hint"].startswith("Touchez le bouton")
+
+
 class TestDashboard:
     def test_open_on_screen_device(self, setup):
         client = setup(jeedom_dashboard="index.php?v=m&p=home")
@@ -263,6 +294,26 @@ class TestVoiceRouter:
     def test_async_ack_is_spoken(self, setup):
         setup(FakeClient(voice_results=[{"reply": "Je m'en occupe.", "matched": True, "route": "async"}]))
         assert run(query("résume la maison")).speech == "Je m'en occupe."
+
+    @pytest.mark.parametrize("route, reply", [
+        ("async", "Je m'en occupe."),
+        ("blocked", "Cet appareil n'est pas autorisé à piloter la maison."),
+    ])
+    def test_route_closes_conversation(self, setup, route, reply):
+        setup(FakeClient(voice_results=[{"reply": reply, "matched": route == "async", "route": route}]))
+        rb = run(query("résume la maison", session={lf.SESSION_CONVERSATION: True}))
+        assert rb.speech == reply
+        assert rb.should_end is True and rb.reprompt is None
+
+    def test_route_closes_session_after_choice(self, setup):
+        setup(FakeClient(voice_results=[{"reply": "Je m'en occupe.", "matched": True, "route": "async"}]))
+        rb = run(query("deux", session={lf.SESSION_CONVERSATION: True, lf.SESSION_OPTIONS: ["a", "b"]}))
+        assert rb.should_end is True
+
+    def test_other_routes_keep_conversation(self, setup):
+        setup(FakeClient(voice_results=[{"reply": "Il fait 21 °C", "matched": True, "route": "voiceQuery"}]))
+        rb = run(query("température", session={lf.SESSION_CONVERSATION: True}))
+        assert rb.should_end is False
 
     @pytest.mark.parametrize("kind, text", [("timeout", "trop de temps"), ("auth", ""), ("error", "")])
     def test_error_is_spoken_without_retry(self, setup, kind, text):
