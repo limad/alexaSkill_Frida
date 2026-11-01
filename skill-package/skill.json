@@ -118,31 +118,31 @@
       "category": "SMART_HOME",
       "isAvailableWorldwide": true,
       "locales": {
-        "de-DE": {
+        "fr-FR": {
           "name": "Frida",
-          "summary": "Steuere dein Zuhause per Sprache über die Interaktionen deines Jeedom.",
-          "description": "Dieser Skill sendet deine Sätze an die Interaktionen deines Jeedom-Servers und liest die Antwort vor. Auf einem Echo Show öffnet er auch dein Jeedom-Dashboard.",
+          "summary": "Pilotez votre maison à la voix grâce aux interactions de votre Jeedom.",
+          "description": "Ce skill envoie vos phrases aux interactions de votre serveur Jeedom et lit la réponse. Sur un Echo Show, il ouvre aussi votre dashboard Jeedom.",
           "smallIconUri": "file://assets/images/common_smallIconUri.png",
           "largeIconUri": "file://assets/images/common_largeIconUri.png",
           "examplePhrases": [
-            "Alexa, öffne frida assistent",
-            "Schalte das Licht in der Küche ein",
-            "Wie warm ist es im Wohnzimmer"
+            "Alexa, ouvre assistant frida",
+            "Allume la lumière de la cuisine",
+            "Quelle est la température du salon"
           ]
         },
-        "en-AU": {
+        "fr-CA": {
           "name": "Frida",
-          "summary": "Control your home by voice through your Jeedom interactions.",
-          "description": "This skill sends your sentences to the interactions of your Jeedom server and reads the answer aloud. On an Echo Show it can also open your Jeedom dashboard.",
+          "summary": "Pilotez votre maison à la voix grâce aux interactions de votre Jeedom.",
+          "description": "Ce skill envoie vos phrases aux interactions de votre serveur Jeedom et lit la réponse. Sur un Echo Show, il ouvre aussi votre dashboard Jeedom.",
           "smallIconUri": "file://assets/images/common_smallIconUri.png",
           "largeIconUri": "file://assets/images/common_largeIconUri.png",
           "examplePhrases": [
-            "Alexa, open frida assistant",
-            "Turn on the kitchen light",
-            "What is the living room temperature"
+            "Alexa, ouvre assistant frida",
+            "Allume la lumière de la cuisine",
+            "Quelle est la température du salon"
           ]
         },
-        "en-CA": {
+        "en-US": {
           "name": "Frida",
           "summary": "Control your home by voice through your Jeedom interactions.",
           "description": "This skill sends your sentences to the interactions of your Jeedom server and reads the answer aloud. On an Echo Show it can also open your Jeedom dashboard.",
@@ -166,7 +166,7 @@
             "What is the living room temperature"
           ]
         },
-        "en-US": {
+        "en-CA": {
           "name": "Frida",
           "summary": "Control your home by voice through your Jeedom interactions.",
           "description": "This skill sends your sentences to the interactions of your Jeedom server and reads the answer aloud. On an Echo Show it can also open your Jeedom dashboard.",
@@ -190,88 +190,16 @@
             "Qué temperatura hace en el salón"
           ]
         },
-        "es-MX": {
+        "de-DE": {
           "name": "Frida",
-          "summary": "Controla tu casa por voz con las interacciones de tu Jeedom.",
-          "description": "Esta skill envía tus frases a las interacciones de tu servidor Jeedom y lee la respuesta. En un Echo Show también abre tu panel de Jeedom.",
+          "summary": "Steuere dein Zuhause per Sprache über die Interaktionen deines Jeedom.",
+          "description": "Dieser Skill sendet deine Sätze an die Interaktionen deines Jeedom-Servers und liest die Antwort vor. Auf einem Echo Show öffnet er auch dein Jeedom-Dashboard.",
           "smallIconUri": "file://assets/images/common_smallIconUri.png",
           "largeIconUri": "file://assets/images/common_largeIconUri.png",
           "examplePhrases": [
-            "Alexa, abre asistente frida",
-            "Enciende la luz de la cocina",
-            "Qué temperatura hace en el salón"
-          ]
-        },
-        "es-US": {
-          "name": "Frida",
-          "summary": "Controla tu casa por voz con las interacciones de tu Jeedom.",
-          "description": "Esta skill envía tus frases a las interacciones de tu servidor Jeedom y lee la respuesta. En un Echo Show también abre tu panel de Jeedom.",
-          "smallIconUri": "file://assets/images/common_smallIconUri.png",
-          "largeIconUri": "file://assets/images/common_largeIconUri.png",
-          "examplePhrases": [
-            "Alexa, abre asistente frida",
-            "Enciende la luz de la cocina",
-            "Qué temperatura hace en el salón"
-          ]
-        },
-        "fr-CA": {
-          "name": "Frida",
-          "summary": "Pilotez votre maison à la voix grâce aux interactions de votre Jeedom.",
-          "description": "Ce skill envoie vos phrases aux interactions de votre serveur Jeedom et lit la réponse. Sur un Echo Show, il ouvre aussi votre dashboard Jeedom.",
-          "smallIconUri": "file://assets/images/common_smallIconUri.png",
-          "largeIconUri": "file://assets/images/common_largeIconUri.png",
-          "examplePhrases": [
-            "Alexa, ouvre assistant frida",
-            "Allume la lumière de la cuisine",
-            "Quelle est la température du salon"
-          ]
-        },
-        "fr-FR": {
-          "name": "Frida",
-          "summary": "Pilotez votre maison à la voix grâce aux interactions de votre Jeedom.",
-          "description": "Ce skill envoie vos phrases aux interactions de votre serveur Jeedom et lit la réponse. Sur un Echo Show, il ouvre aussi votre dashboard Jeedom.",
-          "smallIconUri": "file://assets/images/common_smallIconUri.png",
-          "largeIconUri": "file://assets/images/common_largeIconUri.png",
-          "examplePhrases": [
-            "Alexa, ouvre assistant frida",
-            "Allume la lumière de la cuisine",
-            "Quelle est la température du salon"
-          ]
-        },
-        "it-IT": {
-          "name": "Frida",
-          "summary": "Controlla la casa con la voce tramite le interazioni del tuo Jeedom.",
-          "description": "Questa skill invia le tue frasi alle interazioni del tuo server Jeedom e legge la risposta. Su un Echo Show apre anche la dashboard di Jeedom.",
-          "smallIconUri": "file://assets/images/common_smallIconUri.png",
-          "largeIconUri": "file://assets/images/common_largeIconUri.png",
-          "examplePhrases": [
-            "Alexa, apri assistente frida",
-            "Accendi la luce della cucina",
-            "Che temperatura c'è in soggiorno"
-          ]
-        },
-        "nl-NL": {
-          "name": "Frida",
-          "summary": "Bedien je huis met je stem via de interacties van je Jeedom.",
-          "description": "Deze skill stuurt je zinnen naar de interacties van je Jeedom-server en leest het antwoord voor. Op een Echo Show opent hij ook je Jeedom-dashboard.",
-          "smallIconUri": "file://assets/images/common_smallIconUri.png",
-          "largeIconUri": "file://assets/images/common_largeIconUri.png",
-          "examplePhrases": [
-            "Alexa, open frida assistent",
-            "Zet het licht in de keuken aan",
-            "Hoe warm is het in de woonkamer"
-          ]
-        },
-        "pt-BR": {
-          "name": "Frida",
-          "summary": "Controle a sua casa por voz através das interações do Jeedom.",
-          "description": "Esta skill envia as suas frases para as interações do seu servidor Jeedom e lê a resposta. Num Echo Show também abre o painel do Jeedom.",
-          "smallIconUri": "file://assets/images/common_smallIconUri.png",
-          "largeIconUri": "file://assets/images/common_largeIconUri.png",
-          "examplePhrases": [
-            "Alexa, abrir assistente frida",
-            "Acenda a luz da cozinha",
-            "Qual é a temperatura da sala"
+            "Alexa, öffne frida assistent",
+            "Schalte das Licht in der Küche ein",
+            "Wie warm ist es im Wohnzimmer"
           ]
         }
       },
