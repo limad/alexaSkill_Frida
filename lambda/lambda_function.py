@@ -7,7 +7,7 @@ de Fabiano Santos — voir README.md.
 
 Organisation :
 - `configure()` prépare une fois par conteneur Lambda tout ce qui ne dépend que de
-  config.cfg (erreurs de config, URL du dashboard, client Jeedom) ;
+  config.py (erreurs de config, URL du dashboard, client Jeedom) ;
 - `Turn` regroupe ce qui dépend de la requête (langue, textes, réponse) ;
 - les handlers ne font que choisir quoi répondre.
 """
@@ -85,7 +85,7 @@ def get_client():
     return _client
 
 
-configure(helpers.load_config(os.path.join(helpers.BASE_DIR, "config.cfg")))
+configure(helpers.load_config(os.path.join(helpers.BASE_DIR, "config.py")))
 
 
 class Deadline(object):
@@ -173,10 +173,10 @@ class Turn(object):
         return self.say(random.choice(helpers.split_list(self.texts["alexa_speak_exit"])), keep_open=False)
 
     def not_configured(self):
-        """Réponse « skill non configuré », ou None si config.cfg est complet."""
+        """Réponse « skill non configuré », ou None si config.py est complet."""
         if not CONFIG_ERRORS:
             return None
-        logger.error("config.cfg incomplet, à renseigner : %s", ", ".join(CONFIG_ERRORS))
+        logger.error("config.py incomplet ou illisible, à renseigner : %s", ", ".join(k.upper() for k in CONFIG_ERRORS))
         return self.say_key("alexa_speak_not_configured", keep_open=False)
 
     # Jeedom ---------------------------------------------------------------

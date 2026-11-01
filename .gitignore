@@ -8,4 +8,4 @@ lambda.zip
 ask-resources.json
 .vscode/
 # Copie locale avec vos vrais réglages
-lambda/config.local.cfg
+lambda/config.local.py

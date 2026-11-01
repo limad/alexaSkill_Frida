@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """Construit lambda.zip pour le bouton « Import Code » de l'onglet Code (console Alexa).
 
-Amazon attend un dossier `lambda/` à la racine du zip. Si `lambda/config.local.cfg`
-existe (ignoré par git), il est placé dans le zip à la place de `config.cfg` :
+Amazon attend un dossier `lambda/` à la racine du zip. Si `lambda/config.local.py`
+existe (ignoré par git), il est placé dans le zip à la place de `config.py` :
 vos vrais réglages ne passent jamais par le dépôt.
 
     python build_zip.py [chemin/du/zip]
@@ -13,7 +13,7 @@ import zipfile
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 LAMBDA_DIR = os.path.join(ROOT, "lambda")
-LOCAL_CONFIG = "config.local.cfg"
+LOCAL_CONFIG = "config.local.py"
 SKIPPED_DIRS = ("__pycache__",)
 
 
@@ -26,7 +26,7 @@ def files_to_pack():
             if name.endswith(".pyc") or name == LOCAL_CONFIG:
                 continue
             path = os.path.join(folder, name)
-            if name == "config.cfg" and folder == LAMBDA_DIR and os.path.exists(local):
+            if name == "config.py" and folder == LAMBDA_DIR and os.path.exists(local):
                 path = local
             yield path, "lambda/" + os.path.relpath(os.path.join(folder, name), LAMBDA_DIR).replace(os.sep, "/")
 

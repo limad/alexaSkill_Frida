@@ -34,7 +34,7 @@ Skill Alexa qui envoie vos phrases au **plugin Jeedom Alexa** (`alexaapiv2`) et 
 
 ### Installation
 
-**Avec le plugin Alexa (`alexaapiv2`)** : page du plugin → *Skills Alexa* → **Déployer Skill Frida**. Le plugin télécharge ce dépôt, génère `config.cfg` (URL externe et clé du plugin), puis crée ou met à jour le skill sur votre compte développeur Amazon (code, 13 langues, compilation, activation). Relancez le bouton après chaque mise à jour du dépôt.
+**Avec le plugin Alexa (`alexaapiv2`)** : page du plugin → *Skills Alexa* → **Déployer Skill Frida**. Le plugin télécharge ce dépôt, génère `config.py` (URL externe et clé du plugin), puis crée ou met à jour le skill sur votre compte développeur Amazon (code, 13 langues, compilation, activation). Relancez le bouton après chaque mise à jour du dépôt.
 
 **À la main** (sans le plugin) :
 
@@ -43,12 +43,12 @@ Skill Alexa qui envoie vos phrases au **plugin Jeedom Alexa** (`alexaapiv2`) et 
    - type d'expérience : *Other* → modèle **Custom** → hébergement **Alexa-hosted (Python)** ;
    - région d'hébergement : **EU (Ireland)** pour l'Europe ;
    - modèle de départ : **Import skill** avec l'URL de ce dépôt (`https://github.com/limad/alexaSkill_Frida.git`), ou **Start from Scratch**.
-2. Sur votre PC, copiez `lambda/config.cfg` en `lambda/config.local.cfg` (ignoré par git), renseignez-le (voir ci-dessous), puis construisez le paquet :
+2. Sur votre PC, copiez `lambda/config.py` en `lambda/config.local.py` (ignoré par git), renseignez-le (voir ci-dessous), puis construisez le paquet :
    ```bash
    python build_zip.py
    ```
-   `lambda.zip` contient le dossier `lambda/` attendu par Amazon, avec votre `config.local.cfg` à la place de `config.cfg`.
-3. Onglet **Code** : **Import Code** → choisissez `lambda.zip`, cochez tous les fichiers → **Import**, puis **Deploy**. (Sans Python : créez les fichiers un par un avec *Create File* et renseignez `config.cfg` dans l'éditeur.)
+   `lambda.zip` contient le dossier `lambda/` attendu par Amazon, avec votre `config.local.py` à la place de `config.py`.
+3. Onglet **Code** : **Import Code** → choisissez `lambda.zip`, cochez tous les fichiers → **Import**, puis **Deploy**. (Sans Python : créez les fichiers un par un avec *Create File* et renseignez `config.py` dans l'éditeur.)
 4. Onglet **Build** :
    - *Interaction Model* → *JSON Editor* : collez le contenu de `skill-package/interactionModels/custom/fr-FR.json` (une fois par langue ajoutée) ;
    - *Interfaces* : activez **Alexa Presentation Language** et cochez les formats d'écran (Hub Round, Hub Landscape Small/Medium/Large, Hub Portrait, TV Fullscreen, Mobile) ;
@@ -56,19 +56,21 @@ Skill Alexa qui envoie vos phrases au **plugin Jeedom Alexa** (`alexaapiv2`) et 
 5. Onglet **Test** : passez de *Off* à **Development**, tapez « ouvre assistant frida ».
 6. Le skill est actif sur tous les Echo du compte. Pour le retrouver dans l'app Alexa : Plus → Skills et jeux → Vos skills → **Dév.**
 
-### `config.cfg`
+### `config.py`
 
-| Clé | Défaut | Rôle |
+Une ligne par réglage : texte entre guillemets (`JEEDOM_URL = "https://…"`), `True` / `False` sans guillemets. Une faute de frappe (guillemet oublié…) ne fait pas planter le skill : il répond « pas encore configuré ».
+
+| Réglage | Défaut | Rôle |
 |---|---|---|
-| `jeedom_url` | — (obligatoire) | URL externe de Jeedom, ex. `https://maison.example.com` |
-| `jeedom_apikey` | — (obligatoire) | Clé API du plugin Alexa (`alexaapiv2`) |
-| `jeedom_dashboard` | `index.php?v=m` | Page ouverte sur Echo Show : chemin Jeedom (ex. `index.php?v=d&p=plan&plan_id=2&fullscreen=1` pour un design) ou URL complète |
-| `jeedom_timeout` | `6.5` | Délai max (s) laissé à Jeedom, plafonné à 7,5 s (limite Alexa : 8 s au total) |
-| `verify_ssl` | `True` | Vérifier le certificat HTTPS de Jeedom |
-| `keep_session_open` | `True` | Garder la session ouverte après une réponse quand le skill a été ouvert (« Alexa, ouvre … ») |
-| `keep_session_open_oneshot` | `False` | Garder aussi la session ouverte après une demande directe (« Alexa, demande à … de … ») : Alexa demande « Autre chose ? » |
-| `suppress_greeting` | `False` | Ne pas prononcer le message d'accueil à l'ouverture |
-| `debug` | `False` | Logs détaillés dans CloudWatch (la clé API n'y apparaît jamais) |
+| `JEEDOM_URL` | — (obligatoire) | URL externe de Jeedom, ex. `"https://maison.example.com"` |
+| `JEEDOM_APIKEY` | — (obligatoire) | Clé API du plugin Alexa (`alexaapiv2`) |
+| `JEEDOM_DASHBOARD` | `"index.php?v=m"` | Page ouverte sur Echo Show : chemin Jeedom (ex. `index.php?v=d&p=plan&plan_id=2&fullscreen=1` pour un design) ou URL complète |
+| `JEEDOM_TIMEOUT` | `6.5` | Délai max (s) laissé à Jeedom, plafonné à 7,5 s (limite Alexa : 8 s au total) |
+| `VERIFY_SSL` | `True` | Vérifier le certificat HTTPS de Jeedom |
+| `KEEP_SESSION_OPEN` | `True` | Garder la session ouverte après une réponse quand le skill a été ouvert (« Alexa, ouvre … ») |
+| `KEEP_SESSION_OPEN_ONESHOT` | `False` | Garder aussi la session ouverte après une demande directe (« Alexa, demande à … de … ») : Alexa demande « Autre chose ? » |
+| `SUPPRESS_GREETING` | `False` | Ne pas prononcer le message d'accueil à l'ouverture |
+| `DEBUG` | `False` | Logs détaillés dans CloudWatch (la clé API n'y apparaît jamais) |
 
 Les textes et mots-clés (ouverture du dashboard, mots de sortie) sont dans `lambda/locale/<langue>.lang`.
 
@@ -120,7 +122,7 @@ Les tests n'ont pas besoin du SDK Alexa (stubs dans `tests/conftest.py`). Si `as
 | Phrase de démarrage | `input_text` HA lue à l'ouverture | Non reprise : les questions des scénarios passent par le skill `premiumAsk` |
 | Nettoyage vocal | Supprime `-`, `%`, `€`, accents hors liste (« -5 °C » devenait « 5 °C ») | Garde nombres négatifs et unités, retire HTML, markdown, emojis ; virgule décimale pour de/fr/es/it/nl/pt ; échappement SSML (`&`, `<`) |
 | Mots-clés | Recherche de sous-chaîne (« ouvrir le panneau » dans n'importe quelle phrase) | Mot ou expression entière, sans tenir compte des accents ni de la casse |
-| Configuration | `debug=False` lu comme vrai ; espaces autour de `=` cassaient la clé ; erreur fatale à l'import si la config manque | Booléens lus correctement, espaces tolérés, message vocal « skill non configuré » |
+| Configuration | `debug=False` lu comme vrai ; espaces autour de `=` cassaient la clé ; erreur fatale à l'import si la config manque | `config.py` (format commun aux skills du plugin), booléens lus correctement, faute de frappe → message vocal « skill non configuré » |
 | Erreurs HTTP | `int(response.status_code, 0)` levait une exception sur les pages d'erreur HTML | Codes HTTP classés (auth / injoignable / délai / erreur) |
 | Intentions | `FallbackIntent` et `NavigateHomeIntent` déclarées sans handler ; `CanFulfillIntentRequest` appelait une méthode inexistante du SDK | Handlers ajoutés ; `CanFulfillIntentRequest` retiré (utile seulement aux skills publiés) |
 | IA | Agent de conversation HA (OpenAI, Gemini…) | Plugin Alexa : interactions, LLM via `ai_assistant`, MCP via `mcp_jeedom` |
@@ -144,29 +146,31 @@ Alexa skill that sends your sentences to the **Jeedom Alexa plugin** (`alexaapiv
 
 ### Installation
 
-**With the Alexa plugin (`alexaapiv2`)**: plugin page → *Skills Alexa* → **Déployer Skill Frida** (downloads this repository, writes `config.cfg` with the external URL and the plugin key, creates or updates the skill, builds and enables it).
+**With the Alexa plugin (`alexaapiv2`)**: plugin page → *Skills Alexa* → **Déployer Skill Frida** (downloads this repository, writes `config.py` with the external URL and the plugin key, creates or updates the skill, builds and enables it).
 
 **Manually**:
 
 1. [Alexa developer console](https://developer.amazon.com/alexa/console/ask) → **Create Skill**: *Other* → **Custom** → **Alexa-hosted (Python)**, hosting region close to you, **Import skill** with this repository's URL, or **Start from Scratch**.
-2. Copy `lambda/config.cfg` to `lambda/config.local.cfg` (git-ignored), fill it in, run `python build_zip.py`, then in the **Code** tab use **Import Code** with `lambda.zip` and click **Deploy**.
+2. Copy `lambda/config.py` to `lambda/config.local.py` (git-ignored), fill it in, run `python build_zip.py`, then in the **Code** tab use **Import Code** with `lambda.zip` and click **Deploy**.
 3. **Build** tab: paste `skill-package/interactionModels/custom/<locale>.json` in the *JSON Editor*, enable **Alexa Presentation Language** under *Interfaces* (all screen formats), **Build skill**.
 4. **Test** tab: set it to **Development** and type "open frida assistant".
 5. The skill works on every Echo of your account (Alexa app → More → Skills & Games → Your Skills → **Dev**).
 
-### `config.cfg`
+### `config.py`
 
-| Key | Default | Purpose |
+One line per setting: text in quotes (`JEEDOM_URL = "https://…"`), `True` / `False` without quotes. A typo (missing quote…) does not crash the skill: it answers "not configured yet".
+
+| Setting | Default | Purpose |
 |---|---|---|
-| `jeedom_url` | — (required) | External Jeedom URL |
-| `jeedom_apikey` | — (required) | API key of the Alexa plugin (`alexaapiv2`) |
-| `jeedom_dashboard` | `index.php?v=m` | Page opened on Echo Show: Jeedom path or full URL |
-| `jeedom_timeout` | `6.5` | Max seconds for Jeedom, capped at 7.5 (Alexa limit: 8 s) |
-| `verify_ssl` | `True` | Check Jeedom's HTTPS certificate |
-| `keep_session_open` | `True` | Keep the session open after an answer when the skill was opened |
-| `keep_session_open_oneshot` | `False` | Also keep it open after a one-shot request ("Alexa, ask … to …"), like the original |
-| `suppress_greeting` | `False` | Skip the welcome message |
-| `debug` | `False` | Verbose CloudWatch logs (the API key is never logged) |
+| `JEEDOM_URL` | — (required) | External Jeedom URL |
+| `JEEDOM_APIKEY` | — (required) | API key of the Alexa plugin (`alexaapiv2`) |
+| `JEEDOM_DASHBOARD` | `"index.php?v=m"` | Page opened on Echo Show: Jeedom path or full URL |
+| `JEEDOM_TIMEOUT` | `6.5` | Max seconds for Jeedom, capped at 7.5 (Alexa limit: 8 s) |
+| `VERIFY_SSL` | `True` | Check Jeedom's HTTPS certificate |
+| `KEEP_SESSION_OPEN` | `True` | Keep the session open after an answer when the skill was opened |
+| `KEEP_SESSION_OPEN_ONESHOT` | `False` | Also keep it open after a one-shot request ("Alexa, ask … to …"), like the original |
+| `SUPPRESS_GREETING` | `False` | Skip the welcome message |
+| `DEBUG` | `False` | Verbose CloudWatch logs (the API key is never logged) |
 
 Texts and keywords (open dashboard, exit words) live in `lambda/locale/<locale>.lang`.
 
