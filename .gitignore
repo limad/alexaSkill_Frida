@@ -3,9 +3,6 @@ __pycache__/
 .pytest_cache/
 .venv/
 venv/
-lambda.zip
 .ask/
 ask-resources.json
 .vscode/
-# Copie locale avec vos vrais réglages
-lambda/config.local.py
