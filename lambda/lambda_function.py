@@ -37,6 +37,13 @@ RESPONSE_RESERVE = 0.8
 SESSION_CONVERSATION = "conversation"
 # Clé de session : choix proposés par Jeedom, en attente de « oui » ou d'un numéro.
 SESSION_OPTIONS = "options"
+# Clé de session : dernière réponse de Jeedom, redite sur « répète ».
+SESSION_LAST_REPLY = "last_reply"
+
+# Routes du plugin après lesquelles la session se ferme : `async` (la réponse sera dite
+# plus tard par l'Echo, via sa commande « speak ») et `blocked` (Echo refusé : toute
+# autre demande le serait aussi).
+END_SESSION_ROUTES = ("async", "blocked")
 
 ERROR_TEXT_KEYS = {
     "timeout": "alexa_speak_timeout",
@@ -181,18 +188,19 @@ class Turn(object):
 
     # Jeedom ---------------------------------------------------------------
     def ask_jeedom(self, query, deadline, force_exact=False):
-        """Phrase -> routeur vocal du plugin -> (texte prêt à être dit, choix proposés ou None)."""
+        """Phrase -> routeur vocal du plugin -> (texte prêt à être dit, choix proposés ou None,
+        True si la route du plugin impose de fermer la session)."""
         try:
             result = get_client().voice(query, device_id=self.device_id, person_id=self.person_id,
                                         locale=self.locale, force_exact=force_exact,
                                         timeout=deadline.remaining())
         except JeedomError as e:
             logger.error("Routeur vocal Jeedom en échec (%s) : %s", e.kind, e.detail)
-            return self.texts[ERROR_TEXT_KEYS.get(e.kind, "alexa_speak_error")], None
+            return self.texts[ERROR_TEXT_KEYS.get(e.kind, "alexa_speak_error")], None, False
         logger.debug("voiceRouter : route=%s matched=%s", result.get("route"), result.get("matched"))
         options = result.get("options") if result.get("ambiguous") else None
         options = [str(o) for o in options if str(o).strip()] if isinstance(options, list) else None
-        return self.speech(result.get("reply")), (options or None)
+        return self.speech(result.get("reply")), (options or None), result.get("route") in END_SESSION_ROUTES
 
     def speech(self, reply):
         reply = "" if reply is None else str(reply)
@@ -200,7 +208,11 @@ class Turn(object):
         return helpers.clean_for_speech(reply, self.locale) or self.texts["alexa_speak_empty"]
 
     def answer(self, speech, options, keep_open):
-        """Dit la réponse ; si Jeedom propose un choix, le garde en session et attend."""
+        """Dit la réponse (et l'affiche sur un appareil à écran) ; si Jeedom propose un
+        choix, le garde en session et attend."""
+        self.session[SESSION_LAST_REPLY] = speech
+        if self.has_screen:
+            self.show_screen(speech)
         if options:
             self.session[SESSION_OPTIONS] = options
             return self.say(speech, keep_open=True, reprompt=self.texts["alexa_speak_choice_prompt"])
@@ -213,15 +225,26 @@ class Turn(object):
             return CONFIG["keep_session_open"]
         return CONFIG["keep_session_open_oneshot"]
 
+    def repeat(self):
+        """Redit la dernière réponse de Jeedom (choix en attente compris), sinon le signale."""
+        last = self.session.get(SESSION_LAST_REPLY)
+        if not last:
+            return self.say_key("alexa_speak_nothing_to_repeat", keep_open=self.keep_open_after_answer())
+        if self.has_screen:
+            self.show_screen(last)
+        if self.session.get(SESSION_OPTIONS):
+            return self.say(last, keep_open=True, reprompt=self.texts["alexa_speak_choice_prompt"])
+        return self.say(last, keep_open=self.keep_open_after_answer())
+
     def resolve_choice(self, query):
         """Réponse à un choix en attente : (réponse Alexa ou None si ce n'est pas un choix)."""
         options = self.session.pop(SESSION_OPTIONS, None)
         if not options:
             return None
-        if helpers.is_exit_request(query, self.texts["choice_no"]):
+        if helpers.only_keywords(query, self.texts["choice_no"], self.texts["filler_words"]):
             return self.say_key("alexa_speak_choice_cancelled", keep_open=self.keep_open_after_answer())
         index = helpers.parse_choice(query, len(options), self.texts["choice_numbers"], self.texts["choice_yes"])
-        if index is None and len(options) > 1 and helpers.is_exit_request(query, self.texts["choice_yes"]):
+        if index is None and len(options) > 1 and helpers.only_keywords(query, self.texts["choice_yes"], self.texts["filler_words"]):
             # « oui » alors qu'il y a plusieurs propositions : redemander le numéro.
             self.session[SESSION_OPTIONS] = options
             return self.say_key("alexa_speak_choice_prompt", keep_open=True)
@@ -229,18 +252,24 @@ class Turn(object):
             return None  # autre demande : traitée normalement
         logger.info("Choix %d/%d confirmé", index + 1, len(options))
         deadline = Deadline(self.handler_input, CONFIG["jeedom_timeout"])
-        speech, new_options = self.ask_jeedom(options[index], deadline, force_exact=True)
-        return self.answer(speech, new_options, self.keep_open_after_answer())
+        speech, new_options, ends = self.ask_jeedom(options[index], deadline, force_exact=True)
+        return self.answer(speech, new_options, self.keep_open_after_answer() and not ends)
 
     # Écran ----------------------------------------------------------------
-    def show_home_screen(self):
+    def show_screen(self, reply=None):
+        """Écran avec le bouton du dashboard : accueil, ou réponse de Jeedom si `reply`."""
+        if reply is None:
+            text, hint = self.texts["echo_screen_welcome_text"], self.texts["echo_screen_click_text"]
+        else:
+            # Texte APL : &, < et > s'écrivent en entités, comme en SSML.
+            text, hint = helpers.ssml_safe(reply), ""
         self.builder.add_directive(RenderDocumentDirective(
             token=APL_TOKEN,
             document=APL_DASHBOARD,
             datasources={"jeedom": {
                 "title": self.texts["echo_screen_title"],
-                "welcome": self.texts["echo_screen_welcome_text"],
-                "hint": self.texts["echo_screen_click_text"],
+                "welcome": text,
+                "hint": hint,
                 "button": self.texts["echo_screen_button_text"],
                 "url": DASHBOARD_URL,
             }},
@@ -248,7 +277,7 @@ class Turn(object):
 
     def open_dashboard(self):
         if not self.has_screen:
-            return self.say_key("alexa_speak_no_screen", keep_open=False)
+            return self.say_key("alexa_speak_no_screen", keep_open=self.keep_open_after_answer())
         # OpenURL a besoin d'un document APL affiché : on rend un document vide.
         self.builder.add_directive(RenderDocumentDirective(token=APL_TOKEN, document=APL_EMPTY))
         self.builder.add_directive(ExecuteCommandsDirective(
@@ -271,7 +300,7 @@ class LaunchRequestHandler(AbstractRequestHandler):
             return failure
         turn.session[SESSION_CONVERSATION] = True
         if turn.has_screen:
-            turn.show_home_screen()
+            turn.show_screen()
         if CONFIG["suppress_greeting"]:
             turn.builder.ask(helpers.ssml_safe(turn.texts["alexa_speak_help"]))
             return turn.builder.response
@@ -289,10 +318,13 @@ class QueryIntentHandler(AbstractRequestHandler):
             return turn.say_key("alexa_speak_help", keep_open=True)
         logger.info("Phrase reçue : %s", query)
 
+        # Avant resolve_choice : « répète » ne doit pas effacer un choix en attente.
+        if helpers.only_keywords(query, turn.texts["keywords_to_repeat"], turn.texts["filler_words"]):
+            return turn.repeat()
         choice = turn.resolve_choice(query)
         if choice is not None:
             return choice
-        if helpers.is_exit_request(query, turn.texts["keywords_to_close_skill"]):
+        if helpers.only_keywords(query, turn.texts["keywords_to_close_skill"], turn.texts["filler_words"]):
             return turn.goodbye()
         failure = turn.not_configured()
         if failure:
@@ -300,8 +332,8 @@ class QueryIntentHandler(AbstractRequestHandler):
         if helpers.matches_keyword(query, turn.texts["keywords_to_open_dashboard"]):
             return turn.open_dashboard()
 
-        speech, options = turn.ask_jeedom(query, Deadline(handler_input, CONFIG["jeedom_timeout"]))
-        return turn.answer(speech, options, turn.keep_open_after_answer())
+        speech, options, ends = turn.ask_jeedom(query, Deadline(handler_input, CONFIG["jeedom_timeout"]))
+        return turn.answer(speech, options, turn.keep_open_after_answer() and not ends)
 
 
 class YesNoIntentHandler(AbstractRequestHandler):
@@ -337,6 +369,14 @@ class SpeechIntentHandler(AbstractRequestHandler):
 
     def handle(self, handler_input):
         return Turn(handler_input).say_key(self.text_key, keep_open=True, reprompt_key="alexa_speak_help")
+
+
+class RepeatIntentHandler(AbstractRequestHandler):
+    def can_handle(self, handler_input):
+        return ask_utils.is_intent_name("AMAZON.RepeatIntent")(handler_input)
+
+    def handle(self, handler_input):
+        return Turn(handler_input).repeat()
 
 
 class ExitIntentHandler(AbstractRequestHandler):
@@ -376,6 +416,7 @@ sb.add_request_handler(YesNoIntentHandler("AMAZON.YesIntent", "choice_yes"))
 sb.add_request_handler(YesNoIntentHandler("AMAZON.NoIntent", "choice_no"))
 sb.add_request_handler(SpeechIntentHandler("AMAZON.HelpIntent", "alexa_speak_help"))
 sb.add_request_handler(SpeechIntentHandler("AMAZON.FallbackIntent", "alexa_speak_fallback"))
+sb.add_request_handler(RepeatIntentHandler())
 sb.add_request_handler(ExitIntentHandler())
 sb.add_request_handler(SessionEndedRequestHandler())
 sb.add_exception_handler(CatchAllExceptionHandler())

@@ -6,7 +6,10 @@ Le skill n'appelle que cet endpoint, avec la clé API du plugin alexaapiv2 — j
 l'API du core ni sa clé. La clé voyage dans l'en-tête Authorization, jamais dans
 l'URL, et n'apparaît ni dans les messages d'erreur ni dans les logs.
 """
+import time
+
 import requests
+from urllib3.util import Timeout
 
 # Part maximale du budget réservée à l'ouverture de connexion (DNS + TCP + TLS).
 CONNECT_TIMEOUT = 2.0
@@ -34,16 +37,22 @@ class JeedomClient(object):
 
     def _post_json(self, url, payload, timeout, label, headers=None):
         """POST JSON, contrôle HTTP et décodage. Renvoie le dict de la réponse."""
-        # requests applique le délai à la connexion PUIS à la lecture : on partage le
-        # budget entre les deux pour que le total reste sous `timeout`.
+        # Délai total unique (connexion + attente de la réponse) : urllib3 retire le
+        # temps réellement passé à se connecter. Un couple (connexion, lecture) fixe
+        # perdait la part de connexion même quand celle-ci était immédiate.
         connect = min(CONNECT_TIMEOUT, timeout / 2.0)
-        read = max(timeout - connect, 0.3)
+        started = time.monotonic()
         try:
             resp = self.session.post(url, json=payload, headers=headers,
-                                     timeout=(connect, read), verify=self.verify_ssl)
+                                     timeout=Timeout(total=timeout, connect=connect),
+                                     verify=self.verify_ssl)
         except requests.exceptions.ConnectTimeout:
             raise JeedomError("unreachable", "connexion > {:.1f} s".format(connect))
         except requests.exceptions.Timeout:
+            # Une poignée de main TLS bloquée lève ReadTimeout au délai de connexion,
+            # bien avant la fin du budget : c'est un Jeedom injoignable, pas lent.
+            if time.monotonic() - started < (connect + timeout) / 2.0:
+                raise JeedomError("unreachable", "connexion TLS > {:.1f} s".format(connect))
             raise JeedomError("timeout", "{} > {:.1f} s".format(label, timeout))
         except requests.exceptions.SSLError:
             raise JeedomError("unreachable", "certificat TLS refusé")

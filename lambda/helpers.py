@@ -165,9 +165,19 @@ def matches_keyword(query, keywords):
     return bool(pattern and pattern.search(normalize(query)))
 
 
-def is_exit_request(query, keywords, max_words=3):
-    """Mot de sortie (« non », « merci »…) dans une phrase courte uniquement."""
-    return len(normalize(query).split()) <= max_words and matches_keyword(query, keywords)
+def only_keywords(query, keywords, fillers=""):
+    """Vrai si la phrase n'est faite que de mots-clés de la liste `a;b;c`, plus
+    éventuellement des mots de politesse `fillers` : « non merci » oui, « non éteins
+    tout » non (c'est une commande, pas un mot de sortie)."""
+    pattern = _keyword_regex(keywords or "")
+    text = re.sub(r"[.,;:!?]", " ", normalize(query))
+    if not pattern or not pattern.search(text):
+        return False
+    rest = pattern.sub(" ", text)
+    filler = _keyword_regex(fillers or "")
+    if filler:
+        rest = filler.sub(" ", rest)
+    return not rest.strip(" '-")
 
 
 def parse_choice(query, count, numbers, yes_words):

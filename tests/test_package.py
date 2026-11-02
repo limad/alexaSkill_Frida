@@ -51,7 +51,7 @@ def test_interaction_models():
         assert query["slots"] == [{"name": "query", "type": "AMAZON.Person"}]
         for builtin in ("AMAZON.StopIntent", "AMAZON.CancelIntent", "AMAZON.HelpIntent",
                         "AMAZON.FallbackIntent", "AMAZON.NavigateHomeIntent",
-                        "AMAZON.YesIntent", "AMAZON.NoIntent"):
+                        "AMAZON.YesIntent", "AMAZON.NoIntent", "AMAZON.RepeatIntent"):
             assert builtin in intents, (path, builtin)
 
 

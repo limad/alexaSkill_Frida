@@ -2,6 +2,7 @@
 import pytest
 import requests
 
+import jeedom_client
 from jeedom_client import JeedomClient, JeedomError
 
 APIKEY = "cle-secrete-1234567890"
@@ -49,8 +50,15 @@ class TestErrors:
         assert APIKEY not in str(info.value)
         return info.value.kind
 
-    def test_timeout(self):
+    def test_timeout(self, monkeypatch):
+        clock = iter([100.0, 106.5])  # avant l'appel, puis au bout des 6,5 s
+        monkeypatch.setattr(jeedom_client.time, "monotonic", lambda: next(clock))
         assert self.kind_of(exc=requests.exceptions.ReadTimeout()) == "timeout"
+
+    def test_tls_handshake_stall_means_unreachable(self, monkeypatch):
+        clock = iter([100.0, 102.0])  # ReadTimeout au délai de connexion (2 s)
+        monkeypatch.setattr(jeedom_client.time, "monotonic", lambda: next(clock))
+        assert self.kind_of(exc=requests.exceptions.ReadTimeout()) == "unreachable"
 
     def test_connect_timeout_means_unreachable(self):
         assert self.kind_of(exc=requests.exceptions.ConnectTimeout()) == "unreachable"
@@ -84,7 +92,9 @@ class TestVoiceRouter:
         assert call["json"] == {"query": "allume la cuisine", "deviceSerialNumber": "amzn1.ask.device.X",
                                 "personId": "p1", "locale": "fr-FR", "forceExact": True}
         assert "apikey" not in call["url"]
-        assert call["timeout"] == (2.0, 4.5)  # connexion + lecture = budget
+        # Délai total : la connexion ne réserve pas sa part quand elle est immédiate.
+        assert call["timeout"].total == 6.5
+        assert call["timeout"].connect_timeout == 2.0
         assert call["verify"] is False
 
     @pytest.mark.parametrize("response, kind", [
@@ -106,3 +116,10 @@ def test_only_plugin_endpoint():
     c, _ = client(voice_ok())
     assert not hasattr(c, "call") and not hasattr(c, "ask")
     assert not hasattr(c, "read_variable") and not hasattr(c, "write_variable")
+
+
+def test_short_budget_halves_connect():
+    c, s = client(voice_ok())
+    c.voice("x", timeout=1.0)
+    assert s.calls[0]["timeout"].total == 1.0
+    assert s.calls[0]["timeout"].connect_timeout == 0.5

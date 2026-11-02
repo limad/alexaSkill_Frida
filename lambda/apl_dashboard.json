@@ -40,6 +40,7 @@
             "type": "Text",
             "text": "${payload.jeedom.welcome}",
             "fontSize": "${small ? '20dp' : (large ? '44dp' : '32dp')}",
+            "maxLines": "${small ? 4 : 8}",
             "color": "#ffffff",
             "textAlign": "center",
             "marginTop": "${small ? '8dp' : '20dp'}"
@@ -51,7 +52,7 @@
             "color": "#c7d0d8",
             "textAlign": "center",
             "marginTop": "${small ? '8dp' : '24dp'}",
-            "display": "${small ? 'none' : 'normal'}"
+            "display": "${small || !payload.jeedom.hint ? 'none' : 'normal'}"
           },
           {
             "type": "TouchWrapper",

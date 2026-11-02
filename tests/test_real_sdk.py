@@ -75,6 +75,8 @@ def test_real_sdk_responses():
     query = out["query"]["response"]
     assert query["outputSpeech"]["ssml"] == "<speak>Salon : 21,5 °C &amp; sec.</speak>"
     assert query["shouldEndSession"] is False
+    assert query["directives"][0]["type"] == "Alexa.Presentation.APL.RenderDocument"
+    assert query["directives"][0]["datasources"]["jeedom"]["welcome"] == "Salon : 21,5 °C &amp; sec."
 
     dashboard = out["dashboard"]["response"]["directives"]
     assert [d["type"] for d in dashboard] == [
