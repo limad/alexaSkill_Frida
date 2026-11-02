@@ -24,3 +24,4 @@ alexa_speak_choice_prompt=Sag ja oder die Nummer deiner Wahl.
 alexa_speak_choice_cancelled=Okay, nichts wurde ausgeführt.
 keywords_to_repeat=wiederhole;wiederhol das;wiederhole das;nochmal;noch einmal;wie bitte
 alexa_speak_nothing_to_repeat=Ich habe noch nichts zu wiederholen.
+filler_words=bitte

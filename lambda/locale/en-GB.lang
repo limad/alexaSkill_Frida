@@ -24,3 +24,4 @@ alexa_speak_choice_prompt=Say yes, or the number of your choice.
 alexa_speak_choice_cancelled=Ok, nothing was done.
 keywords_to_repeat=repeat;repeat that;say that again;say it again;pardon;come again
 alexa_speak_nothing_to_repeat=I have nothing to repeat yet.
+filler_words=please

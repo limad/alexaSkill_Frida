@@ -98,12 +98,20 @@ class TestKeywords:
         assert not helpers.matches_keyword("non", None)
         assert not helpers.matches_keyword("non", " ; ")
 
-    def test_exit_only_for_short_sentences(self):
+    def test_only_keywords(self):
         words = "non;rien;c'est tout;merci"
-        assert helpers.is_exit_request("non merci", words)
-        assert helpers.is_exit_request("c'est tout", words)
-        assert not helpers.is_exit_request("allume la lumière du salon merci", words)
-        assert not helpers.is_exit_request("nonante", words)
+        assert helpers.only_keywords("non merci", words)
+        assert helpers.only_keywords("c'est tout", words)
+        assert helpers.only_keywords("Non, merci !", words)
+        assert not helpers.only_keywords("allume la lumière du salon merci", words)
+        assert not helpers.only_keywords("nonante", words)
+        # Commande courte qui commence par un mot de sortie : envoyée à Jeedom.
+        assert not helpers.only_keywords("non éteins tout", words)
+        assert not helpers.only_keywords("merci allume salon", words)
+
+    def test_fillers(self):
+        assert helpers.only_keywords("répète s'il te plaît", "répète;redis", "s'il te plaît;stp")
+        assert not helpers.only_keywords("s'il te plaît", "répète;redis", "s'il te plaît;stp")
 
     def test_split_list(self):
         assert helpers.split_list(" a; b ;;c ") == ["a", "b", "c"]

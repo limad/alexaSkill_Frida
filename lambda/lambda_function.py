@@ -241,10 +241,10 @@ class Turn(object):
         options = self.session.pop(SESSION_OPTIONS, None)
         if not options:
             return None
-        if helpers.is_exit_request(query, self.texts["choice_no"]):
+        if helpers.only_keywords(query, self.texts["choice_no"], self.texts["filler_words"]):
             return self.say_key("alexa_speak_choice_cancelled", keep_open=self.keep_open_after_answer())
         index = helpers.parse_choice(query, len(options), self.texts["choice_numbers"], self.texts["choice_yes"])
-        if index is None and len(options) > 1 and helpers.is_exit_request(query, self.texts["choice_yes"]):
+        if index is None and len(options) > 1 and helpers.only_keywords(query, self.texts["choice_yes"], self.texts["filler_words"]):
             # « oui » alors qu'il y a plusieurs propositions : redemander le numéro.
             self.session[SESSION_OPTIONS] = options
             return self.say_key("alexa_speak_choice_prompt", keep_open=True)
@@ -319,12 +319,12 @@ class QueryIntentHandler(AbstractRequestHandler):
         logger.info("Phrase reçue : %s", query)
 
         # Avant resolve_choice : « répète » ne doit pas effacer un choix en attente.
-        if helpers.is_exit_request(query, turn.texts["keywords_to_repeat"]):
+        if helpers.only_keywords(query, turn.texts["keywords_to_repeat"], turn.texts["filler_words"]):
             return turn.repeat()
         choice = turn.resolve_choice(query)
         if choice is not None:
             return choice
-        if helpers.is_exit_request(query, turn.texts["keywords_to_close_skill"]):
+        if helpers.only_keywords(query, turn.texts["keywords_to_close_skill"], turn.texts["filler_words"]):
             return turn.goodbye()
         failure = turn.not_configured()
         if failure:

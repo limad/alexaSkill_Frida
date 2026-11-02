@@ -24,3 +24,4 @@ alexa_speak_choice_prompt=Di sí, o el número de tu elección.
 alexa_speak_choice_cancelled=Vale, no se ha hecho nada.
 keywords_to_repeat=repite;repítelo;repite eso;otra vez;perdón
 alexa_speak_nothing_to_repeat=Todavía no tengo nada que repetir.
+filler_words=por favor

@@ -6,6 +6,8 @@ Le skill n'appelle que cet endpoint, avec la clé API du plugin alexaapiv2 — j
 l'API du core ni sa clé. La clé voyage dans l'en-tête Authorization, jamais dans
 l'URL, et n'apparaît ni dans les messages d'erreur ni dans les logs.
 """
+import time
+
 import requests
 from urllib3.util import Timeout
 
@@ -39,6 +41,7 @@ class JeedomClient(object):
         # temps réellement passé à se connecter. Un couple (connexion, lecture) fixe
         # perdait la part de connexion même quand celle-ci était immédiate.
         connect = min(CONNECT_TIMEOUT, timeout / 2.0)
+        started = time.monotonic()
         try:
             resp = self.session.post(url, json=payload, headers=headers,
                                      timeout=Timeout(total=timeout, connect=connect),
@@ -46,6 +49,10 @@ class JeedomClient(object):
         except requests.exceptions.ConnectTimeout:
             raise JeedomError("unreachable", "connexion > {:.1f} s".format(connect))
         except requests.exceptions.Timeout:
+            # Une poignée de main TLS bloquée lève ReadTimeout au délai de connexion,
+            # bien avant la fin du budget : c'est un Jeedom injoignable, pas lent.
+            if time.monotonic() - started < (connect + timeout) / 2.0:
+                raise JeedomError("unreachable", "connexion TLS > {:.1f} s".format(connect))
             raise JeedomError("timeout", "{} > {:.1f} s".format(label, timeout))
         except requests.exceptions.SSLError:
             raise JeedomError("unreachable", "certificat TLS refusé")

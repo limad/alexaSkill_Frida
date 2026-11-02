@@ -123,6 +123,12 @@ class TestQuery:
         assert run(query("test")).should_end is False
         assert run(query("test", session={lf.SESSION_CONVERSATION: True})).should_end is True
 
+    @pytest.mark.parametrize("text", ["non éteins tout", "merci allume salon"])
+    def test_short_command_starting_with_exit_word_goes_to_jeedom(self, setup, text):
+        client = setup()
+        run(query(text, session={lf.SESSION_CONVERSATION: True}))
+        assert client.voiced[0]["query"] == text
+
     def test_exit_word(self, setup):
         client = setup()
         rb = run(query("non merci", session={lf.SESSION_CONVERSATION: True}))
@@ -250,6 +256,19 @@ class TestRepeat:
         setup()
         rb = run(make_input(intent="AMAZON.RepeatIntent", apl=True, session=dict(self.CONV, last_reply="Il pleut.")))
         assert rb.directives[0].datasources["jeedom"]["welcome"] == "Il pleut."
+
+    @pytest.mark.parametrize("text, locale", [
+        ("Licht nochmal an", "de-DE"), ("apaga otra vez", "es-ES"), ("repeat the alarm", "en-US"),
+    ])
+    def test_short_command_with_keyword_goes_to_jeedom(self, setup, text, locale):
+        client = setup()
+        run(query(text, locale=locale, session=dict(self.CONV, last_reply="x")))
+        assert client.voiced[0]["query"] == text
+
+    def test_repeat_with_politeness(self, setup):
+        client = setup()
+        rb = run(query("répète s'il te plaît", session=dict(self.CONV, last_reply="Il pleut.")))
+        assert rb.speech == "Il pleut." and client.voiced == []
 
     def test_long_sentence_with_keyword_goes_to_jeedom(self, setup):
         client = setup()

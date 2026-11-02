@@ -2,6 +2,7 @@
 import pytest
 import requests
 
+import jeedom_client
 from jeedom_client import JeedomClient, JeedomError
 
 APIKEY = "cle-secrete-1234567890"
@@ -49,8 +50,15 @@ class TestErrors:
         assert APIKEY not in str(info.value)
         return info.value.kind
 
-    def test_timeout(self):
+    def test_timeout(self, monkeypatch):
+        clock = iter([100.0, 106.5])  # avant l'appel, puis au bout des 6,5 s
+        monkeypatch.setattr(jeedom_client.time, "monotonic", lambda: next(clock))
         assert self.kind_of(exc=requests.exceptions.ReadTimeout()) == "timeout"
+
+    def test_tls_handshake_stall_means_unreachable(self, monkeypatch):
+        clock = iter([100.0, 102.0])  # ReadTimeout au délai de connexion (2 s)
+        monkeypatch.setattr(jeedom_client.time, "monotonic", lambda: next(clock))
+        assert self.kind_of(exc=requests.exceptions.ReadTimeout()) == "unreachable"
 
     def test_connect_timeout_means_unreachable(self):
         assert self.kind_of(exc=requests.exceptions.ConnectTimeout()) == "unreachable"
