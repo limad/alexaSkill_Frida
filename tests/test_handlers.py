@@ -207,6 +207,56 @@ class TestReplyScreen:
         assert data["hint"].startswith("Touchez le bouton")
 
 
+class TestRepeat:
+    CONV = {lf.SESSION_CONVERSATION: True}
+
+    def test_last_reply_kept_in_session(self, setup):
+        setup()
+        hi = query("allume la cuisine", session=self.CONV)
+        run(hi)
+        assert hi.attributes_manager.session_attributes[lf.SESSION_LAST_REPLY] == "C'est fait."
+
+    @pytest.mark.parametrize("text", ["répète", "tu peux répéter", "Redis"])
+    def test_keyword_repeats_without_calling_jeedom(self, setup, text):
+        client = setup()
+        rb = run(query(text, session=dict(self.CONV, last_reply="Salon : 21,5 °C.")))
+        assert rb.speech == "Salon : 21,5 °C."
+        assert rb.should_end is False
+        assert client.voiced == []
+
+    def test_repeat_intent(self, setup):
+        client = setup()
+        rb = run(make_input(intent="AMAZON.RepeatIntent", session=dict(self.CONV, last_reply="Il pleut.")))
+        assert rb.speech == "Il pleut."
+        assert client.voiced == []
+
+    def test_repeat_keeps_pending_choice(self, setup):
+        setup()
+        session = dict(self.CONV, last_reply=AMBIGUOUS["reply"], options=["allume salon", "allume cuisine"])
+        hi = query("répète", session=session)
+        rb = run(hi)
+        assert rb.speech == AMBIGUOUS["reply"]
+        assert rb.reprompt == "Dites oui, ou le numéro de votre choix."
+        assert hi.attributes_manager.session_attributes[lf.SESSION_OPTIONS] == ["allume salon", "allume cuisine"]
+
+    def test_nothing_to_repeat(self, setup):
+        client = setup()
+        rb = run(make_input(intent="AMAZON.RepeatIntent"))
+        assert rb.speech == "Je n'ai encore rien à répéter."
+        assert rb.should_end is True
+        assert client.voiced == []
+
+    def test_repeat_on_screen(self, setup):
+        setup()
+        rb = run(make_input(intent="AMAZON.RepeatIntent", apl=True, session=dict(self.CONV, last_reply="Il pleut.")))
+        assert rb.directives[0].datasources["jeedom"]["welcome"] == "Il pleut."
+
+    def test_long_sentence_with_keyword_goes_to_jeedom(self, setup):
+        client = setup()
+        run(query("répète le message de la sonnette", session=dict(self.CONV, last_reply="x")))
+        assert client.voiced[0]["query"] == "répète le message de la sonnette"
+
+
 class TestDashboard:
     def test_open_on_screen_device(self, setup):
         client = setup(jeedom_dashboard="index.php?v=m&p=home")
@@ -230,6 +280,13 @@ class TestDashboard:
         rb = run(query("ouvre le tableau de bord", apl=False))
         assert rb.directives == []
         assert "pas d'écran" in rb.speech
+        assert rb.should_end is True  # demande directe
+
+    def test_no_screen_keeps_conversation(self, setup):
+        setup()
+        rb = run(query("ouvre jeedom", session={lf.SESSION_CONVERSATION: True}))
+        assert "pas d'écran" in rb.speech
+        assert rb.should_end is False and rb.reprompt == "Autre chose ?"
 
     def test_apl_detected_per_request_not_shared(self, setup):
         # L'original gardait is_apl_supported en global : un Echo Show ouvrait

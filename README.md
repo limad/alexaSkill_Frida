@@ -22,6 +22,7 @@ Skill Alexa qui envoie vos phrases au **plugin Jeedom Alexa** (`alexaapiv2`) et 
 
 - **Conversation** : « Alexa, ouvre assistant frida », puis enchaînez les demandes ; la session reste ouverte (« Autre chose ? ») jusqu'à un mot de sortie (« non », « merci », « c'est tout »…) ou « stop ».
 - **Demande directe** : « Alexa, demande à assistant frida d'allumer la cuisine » ; Alexa répond puis ferme la session (ou la garde ouverte avec `keep_session_open_oneshot=True`, comme l'original).
+- **Répéter** : « répète », « redis », « tu peux répéter » redit la dernière réponse de Jeedom (sans la redemander à Jeedom), choix en attente compris.
 - **Dashboard** : « ouvre jeedom », « ouvre le tableau de bord »… ouvre le dashboard dans le navigateur de l'Echo Show. L'écran affiche aussi un bouton « Ouvrir Jeedom », avec le message d'accueil à l'ouverture du skill, puis le texte de chaque réponse.
 - **Plugin Alexa** : le plugin choisit la voie (interactions, LLM avec le contexte de la maison, MCP en asynchrone) et peut demander « Veux-tu dire… ? » (voir plus bas).
 - **Questions des scénarios** : pour qu'un scénario pose une question et attende votre réponse, utilisez le skill `premiumAsk` du plugin Alexa, pas Frida.
@@ -34,7 +35,7 @@ Skill Alexa qui envoie vos phrases au **plugin Jeedom Alexa** (`alexaapiv2`) et 
 
 ### Installation
 
-**Avec le plugin Alexa (`alexaapiv2`)** : page du plugin → *Skills Alexa* → **Déployer Skill Frida**. Le plugin télécharge ce dépôt, génère `config.py` (URL externe et clé du plugin), puis crée ou met à jour le skill sur votre compte développeur Amazon (code, 7 langues, compilation, activation). Relancez le bouton après chaque mise à jour du dépôt.
+**Avec le plugin Alexa (`alexaapiv2`)** : page du plugin → *Skills Alexa* → **Déployer Skill Frida**. Le plugin télécharge ce dépôt, génère `config.py` (URL externe et clé du plugin), puis crée ou met à jour le skill sur votre compte développeur Amazon (code, 7 langues, compilation, activation). Relancez le bouton après chaque mise à jour du dépôt. Les réglages facultatifs de `config.py` (page du dashboard, session, accueil, certificat, journaux) se règlent dans la configuration du plugin Alexa, onglet *Skills et IA*, et sont pris en compte au déploiement suivant.
 
 **À la main** (sans le plugin), tout se fait dans la [console développeur Alexa](https://developer.amazon.com/alexa/console/ask) :
 
@@ -142,7 +143,9 @@ Alexa skill that sends your sentences to the **Jeedom Alexa plugin** (`alexaapiv
 
 ### Installation
 
-**With the Alexa plugin (`alexaapiv2`)**: plugin page → *Skills Alexa* → **Déployer Skill Frida** (downloads this repository, writes `config.py` with the external URL and the plugin key, creates or updates the skill, builds and enables it).
+**With the Alexa plugin (`alexaapiv2`)**: plugin page → *Skills Alexa* → **Déployer Skill Frida** (downloads this repository, writes `config.py` with the external URL and the plugin key, creates or updates the skill, builds and enables it). The optional `config.py` settings (dashboard page, session, greeting, certificate, logs) are set in the Alexa plugin configuration, *Skills et IA* tab, and applied at the next deployment.
+
+"Repeat" / "say that again" repeats Jeedom's last answer without asking Jeedom again.
 
 **Manually**, everything happens in the [Alexa developer console](https://developer.amazon.com/alexa/console/ask):
 

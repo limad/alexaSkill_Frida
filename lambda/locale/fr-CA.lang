@@ -22,3 +22,5 @@ choice_no=non;annule;rien;laisse tomber
 choice_numbers=un,une,premier,première;deux,deuxième,second,seconde;trois,troisième;quatre,quatrième;cinq,cinquième
 alexa_speak_choice_prompt=Dites oui, ou le numéro de votre choix.
 alexa_speak_choice_cancelled=D'accord, rien n'est fait.
+keywords_to_repeat=répète;répète-moi;redis;redis-le;tu peux répéter;peux-tu répéter;pardon
+alexa_speak_nothing_to_repeat=Je n'ai encore rien à répéter.

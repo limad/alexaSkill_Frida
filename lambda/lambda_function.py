@@ -37,6 +37,8 @@ RESPONSE_RESERVE = 0.8
 SESSION_CONVERSATION = "conversation"
 # Clé de session : choix proposés par Jeedom, en attente de « oui » ou d'un numéro.
 SESSION_OPTIONS = "options"
+# Clé de session : dernière réponse de Jeedom, redite sur « répète ».
+SESSION_LAST_REPLY = "last_reply"
 
 # Routes du plugin après lesquelles la session se ferme : `async` (la réponse sera dite
 # plus tard par l'Echo, via sa commande « speak ») et `blocked` (Echo refusé : toute
@@ -208,6 +210,7 @@ class Turn(object):
     def answer(self, speech, options, keep_open):
         """Dit la réponse (et l'affiche sur un appareil à écran) ; si Jeedom propose un
         choix, le garde en session et attend."""
+        self.session[SESSION_LAST_REPLY] = speech
         if self.has_screen:
             self.show_screen(speech)
         if options:
@@ -221,6 +224,17 @@ class Turn(object):
         if self.session.get(SESSION_CONVERSATION):
             return CONFIG["keep_session_open"]
         return CONFIG["keep_session_open_oneshot"]
+
+    def repeat(self):
+        """Redit la dernière réponse de Jeedom (choix en attente compris), sinon le signale."""
+        last = self.session.get(SESSION_LAST_REPLY)
+        if not last:
+            return self.say_key("alexa_speak_nothing_to_repeat", keep_open=self.keep_open_after_answer())
+        if self.has_screen:
+            self.show_screen(last)
+        if self.session.get(SESSION_OPTIONS):
+            return self.say(last, keep_open=True, reprompt=self.texts["alexa_speak_choice_prompt"])
+        return self.say(last, keep_open=self.keep_open_after_answer())
 
     def resolve_choice(self, query):
         """Réponse à un choix en attente : (réponse Alexa ou None si ce n'est pas un choix)."""
@@ -263,7 +277,7 @@ class Turn(object):
 
     def open_dashboard(self):
         if not self.has_screen:
-            return self.say_key("alexa_speak_no_screen", keep_open=False)
+            return self.say_key("alexa_speak_no_screen", keep_open=self.keep_open_after_answer())
         # OpenURL a besoin d'un document APL affiché : on rend un document vide.
         self.builder.add_directive(RenderDocumentDirective(token=APL_TOKEN, document=APL_EMPTY))
         self.builder.add_directive(ExecuteCommandsDirective(
@@ -304,6 +318,9 @@ class QueryIntentHandler(AbstractRequestHandler):
             return turn.say_key("alexa_speak_help", keep_open=True)
         logger.info("Phrase reçue : %s", query)
 
+        # Avant resolve_choice : « répète » ne doit pas effacer un choix en attente.
+        if helpers.is_exit_request(query, turn.texts["keywords_to_repeat"]):
+            return turn.repeat()
         choice = turn.resolve_choice(query)
         if choice is not None:
             return choice
@@ -354,6 +371,14 @@ class SpeechIntentHandler(AbstractRequestHandler):
         return Turn(handler_input).say_key(self.text_key, keep_open=True, reprompt_key="alexa_speak_help")
 
 
+class RepeatIntentHandler(AbstractRequestHandler):
+    def can_handle(self, handler_input):
+        return ask_utils.is_intent_name("AMAZON.RepeatIntent")(handler_input)
+
+    def handle(self, handler_input):
+        return Turn(handler_input).repeat()
+
+
 class ExitIntentHandler(AbstractRequestHandler):
     INTENTS = ("AMAZON.CancelIntent", "AMAZON.StopIntent", "AMAZON.NavigateHomeIntent")
 
@@ -391,6 +416,7 @@ sb.add_request_handler(YesNoIntentHandler("AMAZON.YesIntent", "choice_yes"))
 sb.add_request_handler(YesNoIntentHandler("AMAZON.NoIntent", "choice_no"))
 sb.add_request_handler(SpeechIntentHandler("AMAZON.HelpIntent", "alexa_speak_help"))
 sb.add_request_handler(SpeechIntentHandler("AMAZON.FallbackIntent", "alexa_speak_fallback"))
+sb.add_request_handler(RepeatIntentHandler())
 sb.add_request_handler(ExitIntentHandler())
 sb.add_request_handler(SessionEndedRequestHandler())
 sb.add_exception_handler(CatchAllExceptionHandler())
