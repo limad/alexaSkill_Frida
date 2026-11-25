@@ -15,13 +15,13 @@ Skill Alexa qui envoie vos phrases au **plugin Jeedom Alexa** (`alexaapiv2`) et 
 ### Fonctionnement
 
 ```
-« Alexa, ouvre assistant frida »  →  Lambda Alexa-Hosted  →  POST <jeedom>/plugins/alexaapiv2/core/php/voiceRouter.php
+« Alexa, ouvre assistant nova »  →  Lambda Alexa-Hosted  →  POST <jeedom>/plugins/alexaapiv2/core/php/voiceRouter.php
                                                               Authorization: Bearer <clé du plugin Alexa>
 « allume la cuisine »              ←  réponse lue          ←  { "reply": "C'est fait", "matched": true }
 ```
 
-- **Conversation** : « Alexa, ouvre assistant frida », puis enchaînez les demandes ; la session reste ouverte (« Autre chose ? ») jusqu'à un mot de sortie (« non », « merci », « c'est tout »…) ou « stop ».
-- **Demande directe** : « Alexa, demande à assistant frida d'allumer la cuisine » ; Alexa répond puis ferme la session (ou la garde ouverte avec `keep_session_open_oneshot=True`, comme l'original).
+- **Conversation** : « Alexa, ouvre assistant nova », puis enchaînez les demandes ; la session reste ouverte (« Autre chose ? ») jusqu'à un mot de sortie (« non », « merci », « c'est tout »…) ou « stop ».
+- **Demande directe** : « Alexa, demande à assistant nova d'allumer la cuisine » ; Alexa répond puis ferme la session (ou la garde ouverte avec `keep_session_open_oneshot=True`, comme l'original).
 - **Répéter** : « répète », « redis », « tu peux répéter » redit la dernière réponse de Jeedom (sans la redemander à Jeedom), choix en attente compris.
 - **Dashboard** : « ouvre jeedom », « ouvre le tableau de bord »… ouvre le dashboard dans le navigateur de l'Echo Show. L'écran affiche aussi un bouton « Ouvrir Jeedom », avec le message d'accueil à l'ouverture du skill, puis le texte de chaque réponse.
 - **Plugin Alexa** : le plugin choisit la voie (interactions, LLM avec le contexte de la maison, MCP en asynchrone) et peut demander « Veux-tu dire… ? » (voir plus bas).
@@ -47,7 +47,7 @@ Skill Alexa qui envoie vos phrases au **plugin Jeedom Alexa** (`alexaapiv2`) et 
 
    Amazon importe le code (`lambda/`), la fiche du skill avec l'écran APL (`skill-package/skill.json`), les icônes et le modèle vocal de la langue choisie (French (FR), et French (CA) recopiée automatiquement), puis le compile : il n'y a rien à coller. Le nom du skill est celui tapé dans le formulaire.
 2. Onglet **Code** : ouvrez `lambda/config.py`, renseignez-le (voir ci-dessous), puis **Save** et **Deploy**.
-3. Onglet **Test** : passez de *Off* à **Development**, tapez « ouvre assistant frida ».
+3. Onglet **Test** : passez de *Off* à **Development**, tapez « ouvre assistant nova ».
 4. Pour une autre langue : *Build* → *Language settings* → ajoutez-la, collez `skill-package/interactionModels/custom/<langue>.json` dans le *JSON Editor*, puis **Build skill** (l'import ne crée que la langue choisie à la création).
 5. Le skill est actif sur tous les Echo du compte. Pour le retrouver dans l'app Alexa : Plus → Skills et jeux → Vos skills → **Dév.**
 
@@ -71,7 +71,7 @@ Les textes et mots-clés (ouverture du dashboard, mots de sortie) sont dans `lam
 
 ### Nom d'appel
 
-Par défaut « **assistant frida** » (fr), « frida assistant » (en), « frida assistent » (de), « asistente frida » (es). Pour le changer : Build → *Invocations* → *Skill Invocation Name*, puis **Build skill**. Choisissez un nom de deux mots ou plus, facile à prononcer, différent des autres skills activés.
+Par défaut « **assistant nova** » (fr), « nova assistant » (en), « nova assistent » (de), « asistente nova » (es). Pour le changer : Build → *Invocations* → *Skill Invocation Name*, puis **Build skill**. Choisissez un nom de deux mots ou plus, facile à prononcer, différent des autres skills activés.
 
 ### Plugin Alexa : IA et choix
 
@@ -151,7 +151,7 @@ Alexa skill that sends your sentences to the **Jeedom Alexa plugin** (`alexaapiv
 
 1. **Create Skill**: *Other* → **Custom** → **Alexa-hosted (Python)**, hosting region close to you, template **Import skill** with this repository's URL. Amazon imports the code (`lambda/`), the skill manifest with the APL screen (`skill-package/skill.json`), the icons and the voice model of the language chosen in the form (plus its variants), and builds it: nothing to paste. The skill name is the one typed in the form.
 2. **Code** tab: open `lambda/config.py`, fill it in (see below), then **Save** and **Deploy**.
-3. **Test** tab: set it to **Development** and type "open frida assistant".
+3. **Test** tab: set it to **Development** and type "open nova assistant".
 4. Other language: *Build* → *Language settings* → add it, paste `skill-package/interactionModels/custom/<locale>.json` in the *JSON Editor*, then **Build skill** (the import only creates the language chosen at creation).
 5. The skill works on every Echo of your account (Alexa app → More → Skills & Games → Your Skills → **Dev**).
 
@@ -175,7 +175,7 @@ Texts and keywords (open dashboard, exit words) live in `lambda/locale/<locale>.
 
 ### Invocation name
 
-Default: "frida assistant" (en), "assistant frida" (fr), "frida assistent" (de), "asistente frida" (es). Change it under Build → *Invocations*, then **Build skill**.
+Default: "nova assistant" (en), "assistant nova" (fr), "nova assistent" (de), "asistente nova" (es). Change it under Build → *Invocations*, then **Build skill**.
 
 ### Scenario questions
 
